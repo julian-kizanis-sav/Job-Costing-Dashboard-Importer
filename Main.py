@@ -224,7 +224,7 @@ def append_kacey_dashboard(import_directories, phase):
         if change_row > -1:
             if not import_sheet['D5'].value:
                 box = wx.MessageBox(f"Rough phase for {import_sheet['D2'].value} is not finished; "
-                                    f"Do you want to import it anyways?", "Empty Import",
+                                    f"Do you want to import it to kacey's dashboard anyways?", "Empty Import",
                                     wx.YES_NO | wx.ICON_INFORMATION)
 
             if import_sheet['D5'].value or box == 2:
@@ -245,7 +245,7 @@ def append_kacey_dashboard(import_directories, phase):
             if FINISH_PHASE == phase:
                 if not import_sheet['D6'].value:
                     box = wx.MessageBox(f"Finish phase for {import_sheet['D2'].value} is not finished; "
-                                        f"Do you want to import it anyways?", "Empty Import",
+                                        f"Do you want to import it to kacey's dashboard anyways?", "Empty Import",
                                         wx.YES_NO | wx.ICON_INFORMATION)
 
                 if import_sheet['D6'].value or box == 2:
@@ -339,7 +339,7 @@ def append_default_dashboard(import_directories, phase):
         if change_row > -1:
             if not import_sheet['D5'].value:
                 box = wx.MessageBox(f"Rough phase for {import_sheet['D2'].value} is not finished; "
-                                    f"Do you want to import it anyways?", "Empty Import",
+                                    f"Do you want to import it to the default dashboard anyways?", "Empty Import",
                                     wx.YES_NO | wx.ICON_INFORMATION)
 
             if import_sheet['D5'].value or box == 2:
@@ -357,7 +357,7 @@ def append_default_dashboard(import_directories, phase):
             if FINISH_PHASE == phase:
                 if not import_sheet['D6'].value:
                     box = wx.MessageBox(f"Finish phase for {import_sheet['D2'].value} is not finished; "
-                                        f"Do you want to import it anyways?", "Empty Import",
+                                        f"Do you want to import it to the default dashboard anyways?", "Empty Import",
                                         wx.YES_NO | wx.ICON_INFORMATION)
                 if import_sheet['D6'].value or box == 2:
                     dashboard.active[f'H{change_row}'].value = import_sheet['D6'].value
@@ -401,7 +401,7 @@ class FileDropTarget(wx.FileDropTarget):
                 wx.MessageBox("Incorrect file type. Please choose an .xlsx file.", "Error", wx.OK | wx.ICON_INFORMATION)
                 continue
             if not dup_check:
-                self.obj.WriteText(file + '\n')
+                self.obj.WriteText(basename(file) + '\n')
                 ImportFiles.append(file)
             else:
                 print("Removed duplicate import file!")
@@ -448,8 +448,7 @@ class FirstFrame(wx.Frame):
         # begin wxGlade: FirstFrame.__set_properties
         self.SetTitle("Import Project Datasheet")
         _icon = wx.NullIcon
-        _icon.CopyFromBitmap(wx.Bitmap("C:\\Users\\Julian.Kizanis\\OneDrive - SAV Digital Environments\\Python Code\\"
-                                       "Job Costing Program\\SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
+        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
 
         self.SetBackgroundColour(wx.Colour(255, 255, 255))
@@ -486,10 +485,7 @@ class FirstFrame(wx.Frame):
         sizer_14.Add(self.text_ctrl_1, 1, wx.EXPAND, 0)
         sizer_7.Add(sizer_14, 1, wx.EXPAND, 0)
         sizer_6.Add(sizer_7, 2, wx.EXPAND, 0)
-        bitmap_2 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap(
-            "C:\\Users\\Julian.Kizanis\\OneDrive - SAV Digital Environments\\Python Code\\"
-            "Job Costing Program\\SAV-Company-Logo.png",
-            wx.BITMAP_TYPE_ANY))
+        bitmap_2 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap("SAV-Company-Logo.png", wx.BITMAP_TYPE_ANY))
         sizer_12.Add(bitmap_2, 0, wx.BOTTOM | wx.RIGHT | wx.TOP, 12)
         sizer_13.Add(self.choice_1, 0, wx.BOTTOM | wx.LEFT, 6)
         sizer_12.Add(sizer_13, 1, wx.EXPAND, 0)
@@ -521,7 +517,7 @@ class FirstFrame(wx.Frame):
             event.skip()
         if not dup_check:
             ImportFiles.append(file)
-            self.text_ctrl_1.WriteText(file + '\n')
+            self.text_ctrl_1.WriteText(basename(file) + '\n')
         else:
             print("Removed duplicate import file!")
             wx.MessageBox("File already in import list.", "Error", wx.OK | wx.ICON_INFORMATION)
@@ -607,8 +603,7 @@ class DatasheetOpenDialog(wx.Dialog):
     def __set_properties(self):
         # begin wxGlade: Datasheet_open_dialog.__set_properties
         _icon = wx.NullIcon
-        _icon.CopyFromBitmap(wx.Bitmap("C:\\Users\\Julian.Kizanis\\OneDrive - SAV Digital Environments\\"
-                                       "Python Code\\Job Costing Program\\SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
+        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
 
         self.SetTitle("dialog_3")
@@ -670,8 +665,7 @@ class DatasheetAlreadyImportedDialog(wx.Dialog):
     def __set_properties(self):
         # begin wxGlade: Datasheet_already_imported_dialog.__set_properties
         _icon = wx.NullIcon
-        _icon.CopyFromBitmap(wx.Bitmap("C:\\Users\\Julian.Kizanis\\OneDrive - SAV Digital Environments\\Python Code\\"
-                                       "Job Costing Program\\SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
+        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
 
         self.SetTitle("dialog_2")
@@ -745,10 +739,7 @@ class AreYouSureReplaceDialog(wx.Dialog):
         # begin wxGlade: are_you_sure_replace_dialog.__set_properties
         self.SetTitle("dialog")
         _icon = wx.NullIcon
-        _icon.CopyFromBitmap(wx.Bitmap(
-            "C:\\Users\\Julian.Kizanis\\OneDrive - SAV Digital Environments\\Python Code\\Job Costing Program\\"
-            "SAV-Social-Profile.jpg",
-            wx.BITMAP_TYPE_ANY))
+        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
 
     def __do_layout(self):
@@ -799,8 +790,7 @@ class AreYouSureDuplicateDialog(wx.Dialog):
     def __set_properties(self):
         # begin wxGlade: are_you_sure_duplicate_dialog.__set_properties
         _icon = wx.NullIcon
-        _icon.CopyFromBitmap(wx.Bitmap("C:\\Users\\Julian.Kizanis\\OneDrive - SAV Digital Environments\\Python Code\\"
-                                       "Job Costing Program\\SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
+        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
         self.SetTitle("dialog_1")
 
@@ -849,8 +839,7 @@ class SuccessFrame(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: success_frame.__set_properties
         _icon = wx.NullIcon
-        _icon.CopyFromBitmap(wx.Bitmap("C:\\Users\\Julian.Kizanis\\OneDrive - SAV Digital Environments\\Python Code\\"
-                                       "Job Costing Program\\SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
+        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
 
         self.SetTitle("frame_2")
@@ -894,8 +883,7 @@ class SuccessFrame(wx.Frame):
 #     def __set_properties(self):
 #         # begin wxGlade: error_frame.__set_properties
 #        _icon = wx.NullIcon
-#        _icon.CopyFromBitmap(wx.Bitmap("C:\\Users\\Julian.Kizanis\\OneDrive - SAV Digital Environments\\Python Code\\
-#        Job Costing Program\\SAV-Social-Profile.jpg",wx.BITMAP_TYPE_ANY))
+#        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg",wx.BITMAP_TYPE_ANY))
 #        self.SetIcon(_icon)
 #
 #         self.SetTitle("frame_2")
