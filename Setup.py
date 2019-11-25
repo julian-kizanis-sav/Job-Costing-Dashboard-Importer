@@ -1,4 +1,4 @@
-import os
+#import os
 
-os.system('cmd /k "pip install wxPython"')
-os.system('cmd /k "pip install openpyxl"')
+#os.system('cmd /k "pip install wxPython"')
+#os.system('cmd /k "pip install openpyxl"')

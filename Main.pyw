@@ -17,39 +17,45 @@ DRAG_SOURCE = wx.ID_ANY
 # Global Variables
 ImportFiles = []
 user = getuser()
-
+pb = False
 
 # Global Constants
 ROUGH_PHASE = 1
 FINISH_PHASE = 2
+CONTINUE = 2
+OVERRIDE = -2
+CANCEL = -1
 
 
 def check_for_duplicates(import_directory, imported_list):
-    for imp in imported_list:
-        if import_directory == imp:
-            return True
-    return False
+    """This function checks if the file has already been imported"""
+    for imp in imported_list:   # cycles through the directories of the previously imported files
+        if import_directory == imp:  # if the directory we are trying to import matches a directory in the database
+            return True     # we found a match
+    return False    # no matches were found
 
 
 def open_spreadsheet(directory):
-    while True:
+    """This function tries to open a spreadsheet and prompts the user if it cannot"""
+    while True:     # infinite loop
         try:
-            dashboard = load_workbook(filename=directory, read_only=False, data_only=True)
-            return dashboard
-        except PermissionError:
-            dialog = DatasheetOpenDialog(basename(directory), None, wx.ID_ANY, "")
-            retry = dialog.ShowModal()
-            if not retry:
+            dashboard = load_workbook(filename=directory, read_only=False, data_only=True)  # tries to open spreadsheet
+            return dashboard    # returns the spreadsheet if it was opened
+        except PermissionError:     # the spreadsheet is already open by something else
+            dialog = DatasheetOpenDialog(basename(directory), None, wx.ID_ANY, "")  # asks if the user wants to retry
+            retry = dialog.ShowModal()  # captures the users response
+            if not retry:   # if the user doesn't want to retry
                 return None
 
 
 def append_dashboard(import_directories, phase, person):
-    global user
-    box = None
-    map_book = open_spreadsheet('Dashboard Mappings.xlsx')
-    if not map_book:
+    """This function can import data using an external .xlsx map"""
+    global user  # the current user
+    box = None  # check for an unfinished phase
+    map_book = open_spreadsheet('Dashboard Mappings.xlsx')  # contains the cell to cell mapping
+    if not map_book:    # checks if map_book is empty
         return None
-    map_sheet = map_book.active
+    map_sheet = map_book.active     # finds the active spreadsheet
     if person == 'default':
         dashboard_directory = f"{map_sheet['A2'].value}"
         import_cells = []
@@ -108,7 +114,7 @@ def append_dashboard(import_directories, phase, person):
                 return "data sheet error: first row empty"
             change_row = last_row + 1
             print(f"change_row:{change_row}")
-        if change_row > -1:
+        if change_row != CANCEL:
             if not import_sheet['D5'].value:
                 box = wx.MessageBox(f"Rough phase for {import_sheet['D2'].value} is not finished; "
                                     f"Do you want to import it anyways?", "Empty Import",
@@ -185,52 +191,56 @@ def append_dashboard(import_directories, phase, person):
 
 
 def append_kacey_dashboard(import_directories, phase):
-    global user
-    box = None
+    """This function can import data to kacey's dashboard"""
+    global user  # the current user
+    box = None  # check for an unfinished phase
+    # dashboard_directory is the directory of Kacey's Dashboard
     dashboard_directory = f"C:/Users/{user}/SAV Digital Environments/SAV - Documents/Departments/Accounting/" \
                           f"Job Costing/00 Master Job Costing Sheet/Job Costing_Master_Data_Sheet.xlsx"
-    dashboard_directory = dashboard_directory
-    # dashboard_directory = "testing.xlsx"
 
     dashboard = open_spreadsheet(dashboard_directory)
     if not dashboard:
         return None
-    for imp in import_directories:
-        import_book = open_spreadsheet(imp)
+    for imp in import_directories:  # cycles through the .xlsx files we are trying to import
+        import_book = open_spreadsheet(imp)  # opens one of the .xlsx files
         if not import_book:
             return None
-        import_sheet = import_book['Data-Calculations']
+        import_sheet = import_book['Data-Calculations']  # opens the sub sheet in the .xlsx file
 
-        change_row = 0
-        last_row = 0
-        for cell in dashboard.active['AT']:
+        change_row = 0  # the row we will be changing in the dashboard
+        last_row = 0    # will be the last row with data in the dashboard
+        for cell in dashboard.active['AT']:     # cycles through the import directories for items in the dashboard
             # print(cell.value)
+            # checks if the file has already been imported for the current phase
             if cell.value == imp and (phase == ROUGH_PHASE or dashboard.active[f'E{cell.row}']):
+                # creates a name to show to the user
                 open_data_sheet = f"Name:{import_sheet['D2'].value}\nLocation:{import_sheet['D3'].value}\n" \
                                   f"PM:{import_sheet['D4'].value}\n"
+                # creates a popup to ask the user they want to override the existing entry
                 dialog = DatasheetAlreadyImportedDialog(open_data_sheet, dashboard.active[f'AU{cell.row}'].value,
                                                         dashboard.active[f'AV{cell.row}'].value, None, wx.ID_ANY, "")
-                change_row = dialog.ShowModal()
-                if change_row == -2:
+                change_row = dialog.ShowModal()     # catches the user's answer
+                if change_row == OVERRIDE:
                     change_row = cell.row
-            if cell.value:
+            if cell.value:  # finds the last row
                 last_row = cell.row
 
-        if change_row == 0:
+        if change_row == 0:     # then we are adding a new row
             if last_row == 0:
                 return "data sheet error: first row empty"
-            change_row = last_row + 1
+            change_row = last_row + 1   # the new row
             print(f"change_row:{change_row}")
-        if change_row > -1:
-            if not import_sheet['D5'].value:
+        if change_row != CANCEL:
+            if not import_sheet['D5'].value:    # if the rough phase doesn't have a completed date
+                # create a popup asking if we want to import an incomplete rough phase
                 box = wx.MessageBox(f"Rough phase for {import_sheet['D2'].value} is not finished; "
                                     f"Do you want to import it to kacey's dashboard anyways?", "Empty Import",
                                     wx.YES_NO | wx.ICON_INFORMATION)
 
-            if import_sheet['D5'].value or box == 2:
+            if import_sheet['D5'].value or box == CONTINUE:     # if we continue
                 dashboard.active[f'AU{change_row}'].value = user
                 dashboard.active[f'AV{change_row}'].value = date.today()
-                dashboard.active[f'A{change_row}'].value = import_sheet['D3'].value
+                dashboard.active[f'A{change_row}'].value = import_sheet['D3'].value     # cell to cell transfer
                 dashboard.active[f'B{change_row}'].value = import_sheet['D2'].value
                 dashboard.active[f'C{change_row}'].value = import_sheet['D4'].value
                 dashboard.active[f'D{change_row}'].value = import_sheet['D5'].value
@@ -243,13 +253,14 @@ def append_kacey_dashboard(import_directories, phase):
                 dashboard.active[f'AT{change_row}'].value = imp
 
             if FINISH_PHASE == phase:
-                if not import_sheet['D6'].value:
+                if not import_sheet['D6'].value:    # if the finish phase doesn't have a completed date
+                    # create a popup asking if we want to import an incomplete rough phase
                     box = wx.MessageBox(f"Finish phase for {import_sheet['D2'].value} is not finished; "
                                         f"Do you want to import it to kacey's dashboard anyways?", "Empty Import",
                                         wx.YES_NO | wx.ICON_INFORMATION)
 
-                if import_sheet['D6'].value or box == 2:
-                    dashboard.active[f'E{change_row}'].value = import_sheet['D6'].value
+                if import_sheet['D6'].value or box == CONTINUE:     # if we continue
+                    dashboard.active[f'E{change_row}'].value = import_sheet['D6'].value     # cell to cell transfer
                     dashboard.active[f'F{change_row}'].value = import_sheet['N26'].value
                     dashboard.active[f'G{change_row}'].value = import_sheet['O26'].value
                     dashboard.active[f'H{change_row}'].value = import_sheet['P26'].value
@@ -301,51 +312,57 @@ def append_kacey_dashboard(import_directories, phase):
 
 
 def append_default_dashboard(import_directories, phase):
-    global user
-    box = None
+    """This function can import data to kacey's dashboard"""
+    global user  # the current user
+    box = None  # check for an unfinished phase
+    # dashboard_directory is the directory of Kacey's Dashboard
     dashboard_directory = f"C:/Users/{user}/SAV Digital Environments/SAV - Documents/Departments/" \
                           f"Accounting/Job Costing/00 Master Job Costing Sheet/Job Costing_Master_Dashboard.xlsx"
     # dashboard_directory = "testing.xlsx"
     dashboard = open_spreadsheet(dashboard_directory)
     if not dashboard:
         return None
-    for imp in import_directories:
-        import_book = open_spreadsheet(imp)
+    for imp in import_directories:  # cycles through the .xlsx files we are trying to import
+        import_book = open_spreadsheet(imp)  # opens one of the .xlsx files
         if not import_book:
             return None
-        import_sheet = import_book['Data-Calculations']
+        import_sheet = import_book['Data-Calculations']  # opens the sub sheet in the .xlsx file
 
-        change_row = 0
-        last_row = 0
-        for cell in dashboard.active['Q']:
+        change_row = 0  # the row we will be changing in the dashboard
+        last_row = 0    # will be the last row with data in the dashboard
+        for cell in dashboard.active['Q']:     # cycles through the import directories for items in the dashboard
             # print(cell.value)
+            # checks if the file has already been imported for the current phase
             if cell.value == imp and (phase == ROUGH_PHASE or dashboard.active[f'E{cell.row}']):
+                # creates a name to show to the user
                 open_data_sheet = f"Name:{import_sheet['D2'].value}\nLocation:{import_sheet['D3'].value}\n" \
                                   f"PM:{import_sheet['D4'].value}\n"
+                # creates a popup to ask the user they want to override the existing entry
                 dialog = DatasheetAlreadyImportedDialog(open_data_sheet, dashboard.active[f'R{cell.row}'].value,
                                                         dashboard.active[f'S{cell.row}'].value, None, wx.ID_ANY, "")
-                change_row = dialog.ShowModal()
-                if change_row == -2:
+                change_row = dialog.ShowModal()     # catches the user's answer
+                if change_row == OVERRIDE:
                     change_row = cell.row
 
-            if cell.value:
+            if cell.value:  # finds the last row
                 last_row = cell.row
 
-        if change_row == 0:
+        if change_row == 0:     # then we are adding a new row
             if last_row == 0:
                 return "data sheet error: first row empty"
             change_row = last_row + 1
             print(f"change_row:{change_row}")
-        if change_row > -1:
-            if not import_sheet['D5'].value:
+        if change_row != CANCEL:
+            if not import_sheet['D5'].value:    # if the rough phase doesn't have a completed date
+                # create a popup asking if we want to import an incomplete rough phase
                 box = wx.MessageBox(f"Rough phase for {import_sheet['D2'].value} is not finished; "
                                     f"Do you want to import it to the default dashboard anyways?", "Empty Import",
                                     wx.YES_NO | wx.ICON_INFORMATION)
 
-            if import_sheet['D5'].value or box == 2:
+            if import_sheet['D5'].value or box == CONTINUE:     # if we continue
                 dashboard.active[f'R{change_row}'].value = user
                 dashboard.active[f's{change_row}'].value = date.today()
-                dashboard.active[f'A{change_row}'].value = import_sheet['D2'].value
+                dashboard.active[f'A{change_row}'].value = import_sheet['D2'].value     # cell to cell transfer
                 dashboard.active[f'B{change_row}'].value = import_sheet['D4'].value
                 dashboard.active[f'C{change_row}'].value = import_sheet['D5'].value
                 dashboard.active[f'D{change_row}'].value = import_sheet['D47'].value
@@ -355,12 +372,14 @@ def append_default_dashboard(import_directories, phase):
                 dashboard.active[f'Q{change_row}'].value = imp
 
             if FINISH_PHASE == phase:
-                if not import_sheet['D6'].value:
+                if not import_sheet['D6'].value:    # if the finish phase doesn't have a completed date
+                    # create a popup asking if we want to import an incomplete rough phase
                     box = wx.MessageBox(f"Finish phase for {import_sheet['D2'].value} is not finished; "
                                         f"Do you want to import it to the default dashboard anyways?", "Empty Import",
                                         wx.YES_NO | wx.ICON_INFORMATION)
-                if import_sheet['D6'].value or box == 2:
-                    dashboard.active[f'H{change_row}'].value = import_sheet['D6'].value
+
+                if import_sheet['D6'].value or box == CONTINUE:     # if we continue
+                    dashboard.active[f'H{change_row}'].value = import_sheet['D6'].value     # cell to cell transfer
                     dashboard.active[f'I{change_row}'].value = import_sheet['H59'].value
                     dashboard.active[f'J{change_row}'].value = import_sheet['P26'].value
                     dashboard.active[f'K{change_row}'].value = import_sheet['F34'].value
@@ -373,7 +392,6 @@ def append_default_dashboard(import_directories, phase):
     return True
 
 
-# Define File Drop Target class
 class FileDropTarget(wx.FileDropTarget):
     """ This object implements Drop Target functionality for Files """
 
@@ -387,7 +405,6 @@ class FileDropTarget(wx.FileDropTarget):
 
     def OnDropFiles(self, x, y, file_names):
         """ Implement File Drop """
-        # For Demo purposes, this function appends a list of the files dropped at the end of the widget's text
         # Move Insertion Point to the end of the widget's text
         self.obj.SetInsertionPointEnd()
         # append a list of the file names dropped
@@ -411,55 +428,56 @@ class FileDropTarget(wx.FileDropTarget):
 
 
 class FirstFrame(wx.Frame):
+    """This object is the main window"""
     def __init__(self, *args, **kwds):
-        # begin wxGlade: FirstFrame.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((600, 428))
-        self.button_4 = wx.FilePickerCtrl(self)
+        self.button_browse = wx.FilePickerCtrl(self)
         # self.button_4.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_choose_file)
-        self.text_ctrl_1 = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_MULTILINE | wx.TE_READONLY)
-        drop_target = FileDropTarget(self.text_ctrl_1)
+        self.text_ctrl_drag_drop = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_MULTILINE | wx.TE_READONLY)
+        drop_target = FileDropTarget(self.text_ctrl_drag_drop)
         # Link the Drop Target Object to the Text Control
-        self.text_ctrl_1.SetDropTarget(drop_target)
+        self.text_ctrl_drag_drop.SetDropTarget(drop_target)
 
-        self.choice_1 = wx.Choice(self, wx.ID_ANY, choices=["Choose Phase", "Rough In", "Finish"])
-        self.checkbox_3 = wx.CheckBox(self, wx.ID_ANY, "General Master Dashboard")
-        self.checkbox_4 = wx.CheckBox(self, wx.ID_ANY, "Kaceys's Master Dashboard")
-        self.checkbox_5 = wx.CheckBox(self, wx.ID_ANY, "Jake's Master Dashboard")
+        # initializes the buttons
+        self.choice_phase = wx.Choice(self, wx.ID_ANY, choices=["Choose Phase", "Rough In", "Finish"])
+        self.checkbox_general_dashboard = wx.CheckBox(self, wx.ID_ANY, "General Master Dashboard")
+        self.checkbox_kacey_dashboard = wx.CheckBox(self, wx.ID_ANY, "Kaceys's Master Dashboard")
+        self.checkbox_jake_dashboard = wx.CheckBox(self, wx.ID_ANY, "Jake's Master Dashboard")
         self.panel_1 = wx.Panel(self, wx.ID_ANY)
-        self.button_2 = wx.Button(self, wx.ID_ANY, "Continue")
-        self.button_3 = wx.Button(self, wx.ID_ANY, "Cancel")
-        self.button_5 = wx.Button(self, wx.ID_ANY, "Clear")
+        self.button_continue = wx.Button(self, wx.ID_ANY, "Continue")
+        self.button_cancel = wx.Button(self, wx.ID_ANY, "Cancel")
+        self.button_clear = wx.Button(self, wx.ID_ANY, "Clear")
 
         self.__set_properties()
         self.__do_layout()
 
-        self.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_choose_file, self.button_4)
-        self.Bind(wx.EVT_CHOICE, self.on_phase_selection, self.choice_1)
-        self.Bind(wx.EVT_CHECKBOX, self.on_general_master_dashboard_checkbox, self.checkbox_3)
-        self.Bind(wx.EVT_CHECKBOX, self.on_kaceys_master_dashboard_checkbox, self.checkbox_4)
-        self.Bind(wx.EVT_CHECKBOX, self.on_jakes_master_dashboard_checkbox, self.checkbox_5)
-        self.Bind(wx.EVT_BUTTON, self.on_continue_from_main_window, self.button_2)
-        self.Bind(wx.EVT_BUTTON, self.on_cancel_program, self.button_3)
-        self.Bind(wx.EVT_BUTTON, self.on_clear, self.button_5)
+        # initializes the events
+        self.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_choose_file, self.button_browse)
+        self.Bind(wx.EVT_CHOICE, self.on_phase_selection, self.choice_phase)
+        self.Bind(wx.EVT_CHECKBOX, self.on_general_master_dashboard_checkbox, self.checkbox_general_dashboard)
+        self.Bind(wx.EVT_CHECKBOX, self.on_kaceys_master_dashboard_checkbox, self.checkbox_kacey_dashboard)
+        self.Bind(wx.EVT_CHECKBOX, self.on_jakes_master_dashboard_checkbox, self.checkbox_jake_dashboard)
+        self.Bind(wx.EVT_BUTTON, self.on_continue_from_main_window, self.button_continue)
+        self.Bind(wx.EVT_BUTTON, self.on_cancel_program, self.button_cancel)
+        self.Bind(wx.EVT_BUTTON, self.on_clear, self.button_clear)
+        self.Bind(wx.EVT_ICONIZE, self.on_minimize)
 
     def __set_properties(self):
-        # begin wxGlade: FirstFrame.__set_properties
         self.SetTitle("Import Project Datasheet")
         _icon = wx.NullIcon
         _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
 
         self.SetBackgroundColour(wx.Colour(255, 255, 255))
-        self.choice_1.SetMinSize((102, 23))
-        self.choice_1.SetSelection(0)
-        self.checkbox_3.SetValue(1)
-        self.checkbox_4.SetValue(1)
-        self.checkbox_5.SetValue(0)
+        self.choice_phase.SetMinSize((102, 23))
+        self.choice_phase.SetSelection(0)
+        self.checkbox_general_dashboard.SetValue(1)
+        self.checkbox_kacey_dashboard.SetValue(1)
+        self.checkbox_jake_dashboard.SetValue(0)
 
     def __do_layout(self):
-        # begin wxGlade: FirstFrame.__do_layout
         sizer_5 = wx.BoxSizer(wx.VERTICAL)
         sizer_9 = wx.GridBagSizer(0, 0)
         sizer_6 = wx.BoxSizer(wx.HORIZONTAL)
@@ -479,110 +497,119 @@ class FirstFrame(wx.Frame):
         static_line_1 = wx.StaticLine(self, wx.ID_ANY)
         sizer_10.Add(static_line_1, 0, wx.EXPAND, 0)
         sizer_5.Add(sizer_10, 0, wx.EXPAND, 0)
-        sizer_16.Add(self.button_4, 0, wx.ALL, 12)
+        sizer_16.Add(self.button_browse, 0, wx.ALL, 12)
         label_6 = wx.StaticText(self, wx.ID_ANY, "Or drag and drop files below")
         sizer_16.Add(label_6, 0, wx.ALIGN_CENTER, 0)
         sizer_7.Add(sizer_16, 0, wx.EXPAND, 0)
-        sizer_14.Add(self.text_ctrl_1, 1, wx.EXPAND, 0)
+        sizer_14.Add(self.text_ctrl_drag_drop, 1, wx.EXPAND, 0)
         sizer_7.Add(sizer_14, 1, wx.EXPAND, 0)
         sizer_6.Add(sizer_7, 2, wx.EXPAND, 0)
         bitmap_2 = wx.StaticBitmap(self, wx.ID_ANY, wx.Bitmap("SAV-Company-Logo.png", wx.BITMAP_TYPE_ANY))
         sizer_12.Add(bitmap_2, 0, wx.BOTTOM | wx.RIGHT | wx.TOP, 12)
-        sizer_13.Add(self.choice_1, 0, wx.BOTTOM | wx.LEFT, 6)
+        sizer_13.Add(self.choice_phase, 0, wx.BOTTOM | wx.LEFT, 6)
         sizer_12.Add(sizer_13, 1, wx.EXPAND, 0)
         sizer_8.Add(sizer_12, 0, wx.EXPAND, 0)
-        sizer_15.Add(self.checkbox_3, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
-        sizer_15.Add(self.checkbox_4, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
-        sizer_15.Add(self.checkbox_5, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
+        sizer_15.Add(self.checkbox_general_dashboard, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
+        sizer_15.Add(self.checkbox_kacey_dashboard, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
+        sizer_15.Add(self.checkbox_jake_dashboard, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
         sizer_11.Add(sizer_15, 1, wx.EXPAND, 0)
         sizer_8.Add(sizer_11, 1, wx.EXPAND, 0)
         sizer_6.Add(sizer_8, 0, wx.EXPAND | wx.LEFT, 6)
         sizer_5.Add(sizer_6, 1, wx.EXPAND, 0)
         sizer_9.Add(self.panel_1, (0, 0), (1, 1), wx.EXPAND, 0)
-        sizer_9.Add(self.button_2, (0, 1), (1, 1), wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL, 6)
-        sizer_9.Add(self.button_3, (0, 3), (1, 1), wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL, 6)
-        sizer_9.Add(self.button_5, (0, 2), (1, 1), wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL, 6)
+        sizer_9.Add(self.button_continue, (0, 1), (1, 1), wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL, 6)
+        sizer_9.Add(self.button_cancel, (0, 3), (1, 1), wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL, 6)
+        sizer_9.Add(self.button_clear, (0, 2), (1, 1), wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL, 6)
         sizer_5.Add(sizer_9, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.EXPAND, 12)
         self.SetSizer(sizer_5)
         self.Layout()
 
-    def on_choose_file(self, event):  # wxGlade: FirstFrame.<event_handler>
+    def on_choose_file(self, event):    # button_browse
         global ImportFiles
         dup_check = False
-        file = self.button_4.GetPath()
-        for iFile in ImportFiles:
+        file = self.button_browse.GetPath()     # catches what file the user chose
+        for iFile in ImportFiles:   # checks if file is already in the to-be imported list
             if file == iFile:
                 dup_check = True
-        if file.endswith('.xlsx'):
+        if not file.endswith('.xlsx'):
             wx.MessageBox("Incorrect file type. Please choose an .xlsx file.", "Error", wx.OK | wx.ICON_INFORMATION)
             event.skip()
         if not dup_check:
             ImportFiles.append(file)
-            self.text_ctrl_1.WriteText(basename(file) + '\n')
+            self.text_ctrl_drag_drop.WriteText(basename(file) + '\n')   # shows the user they chose this
         else:
             print("Removed duplicate import file!")
             wx.MessageBox("File already in import list.", "Error", wx.OK | wx.ICON_INFORMATION)
         event.Skip()
 
-    def on_phase_selection(self, event):  # wxGlade: FirstFrame.<event_handler>
-        print(self.choice_1.GetSelection())
+    def on_phase_selection(self, event):  # event handler
+        print(self.choice_phase.GetSelection())
         event.Skip()
 
-    def on_general_master_dashboard_checkbox(self, event):  # wxGlade: FirstFrame.<event_handler>
-        print(self.checkbox_3.GetValue())
+    def on_general_master_dashboard_checkbox(self, event):  # event handler
+        print(self.checkbox_general_dashboard.GetValue())
         event.Skip()
 
-    def on_kaceys_master_dashboard_checkbox(self, event):  # wxGlade: FirstFrame.<event_handler>
-        print(self.checkbox_4.GetValue())
+    def on_kaceys_master_dashboard_checkbox(self, event):  # event handler
+        print(self.checkbox_kacey_dashboard.GetValue())
         event.Skip()
 
-    def on_jakes_master_dashboard_checkbox(self, event):  # wxGlade: FirstFrame.<event_handler>
-        print(self.checkbox_5.GetValue())
+    def on_jakes_master_dashboard_checkbox(self, event):  # event handler
+        print(self.checkbox_jake_dashboard.GetValue())
         wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
-        self.checkbox_5.SetValue(0)
+        self.checkbox_jake_dashboard.SetValue(0)
         event.Skip()
 
-    def on_continue_from_main_window(self, event):  # wxGlade: FirstFrame.<event_handler>
+    def on_continue_from_main_window(self, event):  # event handler
         global ImportFiles
-        if self.choice_1.GetSelection() == 0:
+        if self.choice_phase.GetSelection() == 0:   # no phase was chosen
             wx.MessageBox("Please choose a phase.", "Error", wx.OK | wx.ICON_INFORMATION)
         elif not ImportFiles:
             wx.MessageBox("Please choose a file to import.", "Error", wx.OK | wx.ICON_INFORMATION)
         else:
+            # for tracking if something went wrong
             jake_check = kacey_check = default_check = True
-            if self.checkbox_3.GetValue():
-                default_check = append_default_dashboard(ImportFiles, self.choice_1.GetSelection())
-            if self.checkbox_4.GetValue():
-                kacey_check = append_kacey_dashboard(ImportFiles, self.choice_1.GetSelection())
-            if self.checkbox_5.GetValue():
-                # jake_check = append_kacey_dashboard(ImportFiles, self.choice_1.GetSelection())
+            if self.checkbox_general_dashboard.GetValue():
+                default_check = append_default_dashboard(ImportFiles, self.choice_phase.GetSelection())
+            if self.checkbox_kacey_dashboard.GetValue():
+                kacey_check = append_kacey_dashboard(ImportFiles, self.choice_phase.GetSelection())
+            if self.checkbox_jake_dashboard.GetValue():
+                # jake_check = append_jake_dashboard(ImportFiles, self.choice_1.GetSelection())
                 wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
 
-            if default_check and kacey_check and jake_check:
-                wx.MessageBox(f"{self.text_ctrl_1.GetValue()}\n Was successfully imported!", "Done!",
+            if default_check and kacey_check and jake_check:    # if everything was successfully imported
+                wx.MessageBox(f"{self.text_ctrl_drag_drop.GetValue()}\n Was successfully imported!", "Done!",
                               wx.OK | wx.ICON_INFORMATION)
             else:
                 wx.MessageBox("Something went wrong or did not import", "Done!", wx.OK | wx.ICON_INFORMATION)
-            self.text_ctrl_1.SetValue("")
-            ImportFiles.clear()
+            self.text_ctrl_drag_drop.SetValue("")   # resets the program
+            ImportFiles.clear()   # resets the program
 
         event.Skip()
 
-    def on_cancel_program(self, event):  # wxGlade: FirstFrame.<event_handler>
+    def on_cancel_program(self, event):  # event handler
         print(getuser())
         self.Destroy()
         event.Skip()
 
-    def on_clear(self, event):
-        self.text_ctrl_1.SetValue("")
-        global ImportFiles
+    def on_clear(self, event):     # resets the program
+        self.text_ctrl_drag_drop.SetValue("")
+        global ImportFiles, pb
         ImportFiles.clear()
+        pb = not pb
+        event.Skip()
+
+    @staticmethod
+    def on_minimize(event):     # easter egg
+        global pb
+        if pb:
+            wx.MessageBox("Or is it Peanutbutter?", "Peanutbutter!", wx.OK | wx.ICON_INFORMATION)
+        pb = False
         event.Skip()
 
 
 class DatasheetOpenDialog(wx.Dialog):
     def __init__(self, open_data_sheet, *args, **kwds):
-        # begin wxGlade: Datasheet_open_dialog.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
         wx.Dialog.__init__(self, *args, **kwds)
         self.open_data_sheet = open_data_sheet
@@ -623,16 +650,16 @@ class DatasheetOpenDialog(wx.Dialog):
         sizer_1.Fit(self)
         self.Layout()
 
-    def text_ctrl_open_data_sheet(self, event):  # wxGlade: Datasheet_open_dialog.<event_handler>
+    def text_ctrl_open_data_sheet(self, event):  # event handler
         print(f"{self.open_data_sheet} is currently open by a user!")
         event.Skip()
 
-    def on_retry(self, event):  # wxGlade: Datasheet_open_dialog.<event_handler>
+    def on_retry(self, event):  # event handler
         self.EndModal(True)
         self.Destroy()
         event.Skip()
 
-    def on_back(self, event):  # wxGlade: Datasheet_open_dialog.<event_handler>
+    def on_back(self, event):  # event handler
         self.EndModal(False)
         self.Destroy()
         event.Skip()
@@ -640,7 +667,6 @@ class DatasheetOpenDialog(wx.Dialog):
 
 class DatasheetAlreadyImportedDialog(wx.Dialog):
     def __init__(self, open_sheet, imported_by, imported_date, *args, **kwds):
-        # begin wxGlade: Datasheet_already_imported_dialog.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
         wx.Dialog.__init__(self, *args, **kwds)
         self.open_data_sheet = open_sheet
@@ -664,7 +690,6 @@ class DatasheetAlreadyImportedDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_back, self.button_5)
 
     def __set_properties(self):
-        # begin wxGlade: Datasheet_already_imported_dialog.__set_properties
         _icon = wx.NullIcon
         _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
@@ -673,7 +698,6 @@ class DatasheetAlreadyImportedDialog(wx.Dialog):
         self.text_ctrl_already_imported.SetBackgroundColour(wx.Colour(255, 255, 255))
 
     def __do_layout(self):
-        # begin wxGlade: Datasheet_already_imported_dialog.__do_layout
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_1.Add(self.text_ctrl_already_imported, 0, wx.ALL | wx.EXPAND, 12)
@@ -686,18 +710,18 @@ class DatasheetAlreadyImportedDialog(wx.Dialog):
         sizer_1.Fit(self)
         self.Layout()
 
-    def text_ctrl_open_data_sheet(self, event):  # wxGlade: Datasheet_already_imported_frame.<event_handler>
+    def text_ctrl_open_data_sheet(self, event):  # event handler
         print(f"{self.open_data_sheet} has already been imported")
         event.Skip()
 
-    def on_duplicate(self, event):  # wxGlade: Datasheet_already_imported_frame.<event_handler>
+    def on_duplicate(self, event):  # event handler
         if user == "Julian.Kizanis":
             dialog = AreYouSureDuplicateDialog(None, wx.ID_ANY, "")
             answer = dialog.ShowModal()
             if answer:
                 self.EndModal(0)
             else:
-                self.EndModal(-1)
+                self.EndModal(CANCEL)
             self.Destroy()
         else:
             wx.MessageBox("This functionality has been disabled, please contact "
@@ -705,25 +729,24 @@ class DatasheetAlreadyImportedDialog(wx.Dialog):
                           "Duplicate", wx.OK | wx.ICON_INFORMATION)
         event.Skip()
 
-    def on_replace(self, event):  # wxGlade: Datasheet_already_imported_frame.<event_handler>
+    def on_replace(self, event):  # event handler
         dialog = AreYouSureReplaceDialog(None, wx.ID_ANY, "")
         answer = dialog.ShowModal()
         if answer:
-            self.EndModal(-2)
+            self.EndModal(OVERRIDE)
         else:
-            self.EndModal(-1)
+            self.EndModal(CANCEL)
         self.Destroy()
         event.Skip()
 
-    def on_back(self, event):  # wxGlade: Datasheet_already_imported_frame.<event_handler>
-        self.EndModal(-1)
+    def on_back(self, event):  # event handler
+        self.EndModal(CANCEL)
         self.Destroy()
         event.Skip()
 
 
 class AreYouSureReplaceDialog(wx.Dialog):
     def __init__(self, *args, **kwds):
-        # begin wxGlade: are_you_sure_replace_dialog.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
         wx.Dialog.__init__(self, *args, **kwds)
         self.panel_2 = wx.Panel(self, wx.ID_ANY)
@@ -737,14 +760,12 @@ class AreYouSureReplaceDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_back, self.button_5)
 
     def __set_properties(self):
-        # begin wxGlade: are_you_sure_replace_dialog.__set_properties
         self.SetTitle("dialog")
         _icon = wx.NullIcon
         _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
 
     def __do_layout(self):
-        # begin wxGlade: are_you_sure_replace_dialog.__do_layout
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         label_2 = wx.StaticText(self, wx.ID_ANY,
@@ -760,12 +781,12 @@ class AreYouSureReplaceDialog(wx.Dialog):
         sizer_1.Fit(self)
         self.Layout()
 
-    def on_replace(self, event):  # wxGlade: are_you_sure_replace_dialog.<event_handler>
+    def on_replace(self, event):  # event handler
         self.EndModal(True)
         self.Destroy()
         event.Skip()
 
-    def on_back(self, event):  # wxGlade: are_you_sure_replace_dialog.<event_handler>
+    def on_back(self, event):  # event handler
         self.EndModal(False)
         self.Destroy()
         event.Skip()
@@ -773,7 +794,6 @@ class AreYouSureReplaceDialog(wx.Dialog):
 
 class AreYouSureDuplicateDialog(wx.Dialog):
     def __init__(self, *args, **kwds):
-        # begin wxGlade: are_you_sure_duplicate_dialog.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_DIALOG_STYLE
         wx.Dialog.__init__(self, *args, **kwds)
         self.panel_2 = wx.Panel(self, wx.ID_ANY)
@@ -789,14 +809,12 @@ class AreYouSureDuplicateDialog(wx.Dialog):
     # end wxGlade
 
     def __set_properties(self):
-        # begin wxGlade: are_you_sure_duplicate_dialog.__set_properties
         _icon = wx.NullIcon
         _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
         self.SetTitle("dialog_1")
 
     def __do_layout(self):
-        # begin wxGlade: are_you_sure_duplicate_dialog.__do_layout
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         label_2 = wx.StaticText(self, wx.ID_ANY, "Are you Sure you want to add the project as a duplicate?")
@@ -812,12 +830,12 @@ class AreYouSureDuplicateDialog(wx.Dialog):
 
     # end wxGlade
 
-    def on_duplicate(self, event):  # wxGlade: are_you_sure_duplicate_dialog.<event_handler>
+    def on_duplicate(self, event):  # event handler
         self.EndModal(True)
         self.Destroy()
         event.Skip()
 
-    def on_back(self, event):  # wxGlade: are_you_sure_duplicate_dialog.<event_handler>
+    def on_back(self, event):  # event handler
         self.EndModal(False)
         self.Destroy()
         event.Skip()
@@ -825,7 +843,6 @@ class AreYouSureDuplicateDialog(wx.Dialog):
 
 class SuccessFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        # begin wxGlade: success_frame.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE | wx.STAY_ON_TOP
         wx.Frame.__init__(self, *args, **kwds)
         self.SetSize((350, 150))
@@ -838,7 +855,6 @@ class SuccessFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.on_okay, self.button_5)
 
     def __set_properties(self):
-        # begin wxGlade: success_frame.__set_properties
         _icon = wx.NullIcon
         _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
         self.SetIcon(_icon)
@@ -847,7 +863,6 @@ class SuccessFrame(wx.Frame):
         self.SetBackgroundColour(wx.Colour(255, 255, 255))
 
     def __do_layout(self):
-        # begin wxGlade: success_frame.__do_layout
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         label_2 = wx.StaticText(self, wx.ID_ANY, "The project was successfully imported!")
@@ -859,57 +874,48 @@ class SuccessFrame(wx.Frame):
         self.SetSizer(sizer_1)
         self.Layout()
 
-    def on_okay(self, event):  # wxGlade: success_frame.<event_handler>
+    def on_okay(self, event):  # event handler
         print("Event handler 'on_okay' not implemented!")
         self.Destroy()
         event.Skip()
 
 
-# class error_frame(wx.Frame):
-#     def __init__(self, *args, **kwds):
-#         # begin wxGlade: error_frame.__init__
-#         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE | wx.STAY_ON_TOP
-#         wx.Frame.__init__(self, *args, **kwds)
-#         self.SetSize((350, 150))
-#         self.panel_2 = wx.Panel(self, wx.ID_ANY)
-#         self.button_5 = wx.Button(self, wx.ID_ANY, "Okay")
-#
-#         self.__set_properties()
-#         self.__do_layout()
-#
-#         self.Bind(wx.EVT_BUTTON, self.on_okay, self.button_5)
-#
-#
-#
-#     def __set_properties(self):
-#         # begin wxGlade: error_frame.__set_properties
-#        _icon = wx.NullIcon
-#        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg",wx.BITMAP_TYPE_ANY))
-#        self.SetIcon(_icon)
-#
-#         self.SetTitle("frame_2")
-#         self.SetBackgroundColour(wx.Colour(255, 255, 255))
-#
-#     # end wxGlade
-#
-#     def __do_layout(self):
-#         # begin wxGlade: error_frame.__do_layout
-#         sizer_1 = wx.BoxSizer(wx.VERTICAL)
-#         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
-#         label_2 = wx.StaticText(self, wx.ID_ANY, "An unexpected error has occurred!")
-#         label_2.Wrap(300)
-#         sizer_1.Add(label_2, 0, wx.ALL, 12)
-#         sizer_2.Add(self.panel_2, 1, 0, 0)
-#         sizer_2.Add(self.button_5, 0, wx.ALIGN_BOTTOM | wx.ALL | wx.FIXED_MINSIZE, 12)
-#         sizer_1.Add(sizer_2, 1, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.EXPAND | wx.FIXED_MINSIZE, 1)
-#         self.SetSizer(sizer_1)
-#         self.Layout()
-#
-#     # end wxGlade
-#
-#     def on_okay(self, event):  # wxGlade: error_frame.<event_handler>
-#         print("Event handler 'on_okay' not implemented!")
-#         event.Skip()
+class ErrorFrame(wx.Frame):
+    def __init__(self, *args, **kwds):
+        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE | wx.STAY_ON_TOP
+        wx.Frame.__init__(self, *args, **kwds)
+        self.SetSize((350, 150))
+        self.panel_2 = wx.Panel(self, wx.ID_ANY)
+        self.button_5 = wx.Button(self, wx.ID_ANY, "Okay")
+
+        self.__set_properties()
+        self.__do_layout()
+
+        self.Bind(wx.EVT_BUTTON, self.on_okay, self.button_5)
+
+    def __set_properties(self):
+        _icon = wx.NullIcon
+        _icon.CopyFromBitmap(wx.Bitmap("SAV-Social-Profile.jpg", wx.BITMAP_TYPE_ANY))
+        self.SetIcon(_icon)
+        self.SetTitle("frame_2")
+        self.SetBackgroundColour(wx.Colour(255, 255, 255))
+
+    def __do_layout(self):
+        sizer_1 = wx.BoxSizer(wx.VERTICAL)
+        sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
+        label_2 = wx.StaticText(self, wx.ID_ANY, "An unexpected error has occurred!")
+        label_2.Wrap(300)
+        sizer_1.Add(label_2, 0, wx.ALL, 12)
+        sizer_2.Add(self.panel_2, 1, 0, 0)
+        sizer_2.Add(self.button_5, 0, wx.ALIGN_BOTTOM | wx.ALL | wx.FIXED_MINSIZE, 12)
+        sizer_1.Add(sizer_2, 1, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.EXPAND | wx.FIXED_MINSIZE, 1)
+        self.SetSizer(sizer_1)
+        self.Layout()
+
+    @staticmethod
+    def on_okay(event):  # event handler
+        print("Event handler 'on_okay' not implemented!")
+        event.Skip()
 
 
 class MyApp(wx.App):
