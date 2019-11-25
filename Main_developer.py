@@ -444,7 +444,7 @@ class FirstFrame(wx.Frame):
         self.choice_phase = wx.Choice(self, wx.ID_ANY, choices=["Choose Phase", "Rough In", "Finish"])
         self.checkbox_general_dashboard = wx.CheckBox(self, wx.ID_ANY, "General Master Dashboard")
         self.checkbox_kacey_dashboard = wx.CheckBox(self, wx.ID_ANY, "Kaceys's Master Dashboard")
-        self.checkbox_jake_dashboard = wx.CheckBox(self, wx.ID_ANY, "Jake's Master Dashboard")
+        # self.checkbox_jake_dashboard = wx.CheckBox(self, wx.ID_ANY, "Jake's Master Dashboard")
         self.panel_1 = wx.Panel(self, wx.ID_ANY)
         self.button_continue = wx.Button(self, wx.ID_ANY, "Continue")
         self.button_cancel = wx.Button(self, wx.ID_ANY, "Cancel")
@@ -458,7 +458,7 @@ class FirstFrame(wx.Frame):
         self.Bind(wx.EVT_CHOICE, self.on_phase_selection, self.choice_phase)
         self.Bind(wx.EVT_CHECKBOX, self.on_general_master_dashboard_checkbox, self.checkbox_general_dashboard)
         self.Bind(wx.EVT_CHECKBOX, self.on_kaceys_master_dashboard_checkbox, self.checkbox_kacey_dashboard)
-        self.Bind(wx.EVT_CHECKBOX, self.on_jakes_master_dashboard_checkbox, self.checkbox_jake_dashboard)
+        # self.Bind(wx.EVT_CHECKBOX, self.on_jakes_master_dashboard_checkbox, self.checkbox_jake_dashboard)
         self.Bind(wx.EVT_BUTTON, self.on_continue_from_main_window, self.button_continue)
         self.Bind(wx.EVT_BUTTON, self.on_cancel_program, self.button_cancel)
         self.Bind(wx.EVT_BUTTON, self.on_clear, self.button_clear)
@@ -475,7 +475,7 @@ class FirstFrame(wx.Frame):
         self.choice_phase.SetSelection(0)
         self.checkbox_general_dashboard.SetValue(1)
         self.checkbox_kacey_dashboard.SetValue(1)
-        self.checkbox_jake_dashboard.SetValue(0)
+        # self.checkbox_jake_dashboard.SetValue(0)
 
     def __do_layout(self):
         sizer_5 = wx.BoxSizer(wx.VERTICAL)
@@ -511,7 +511,7 @@ class FirstFrame(wx.Frame):
         sizer_8.Add(sizer_12, 0, wx.EXPAND, 0)
         sizer_15.Add(self.checkbox_general_dashboard, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
         sizer_15.Add(self.checkbox_kacey_dashboard, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
-        sizer_15.Add(self.checkbox_jake_dashboard, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
+        # sizer_15.Add(self.checkbox_jake_dashboard, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
         sizer_11.Add(sizer_15, 1, wx.EXPAND, 0)
         sizer_8.Add(sizer_11, 1, wx.EXPAND, 0)
         sizer_6.Add(sizer_8, 0, wx.EXPAND | wx.LEFT, 6)
@@ -554,11 +554,11 @@ class FirstFrame(wx.Frame):
         print(self.checkbox_kacey_dashboard.GetValue())
         event.Skip()
 
-    def on_jakes_master_dashboard_checkbox(self, event):  # event handler
-        print(self.checkbox_jake_dashboard.GetValue())
-        wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
-        self.checkbox_jake_dashboard.SetValue(0)
-        event.Skip()
+    # def on_jakes_master_dashboard_checkbox(self, event):  # event handler
+    #     print(self.checkbox_jake_dashboard.GetValue())
+    #     wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
+    #     self.checkbox_jake_dashboard.SetValue(0)
+    #     event.Skip()
 
     def on_continue_from_main_window(self, event):  # event handler
         global ImportFiles
@@ -573,9 +573,9 @@ class FirstFrame(wx.Frame):
                 default_check = append_default_dashboard(ImportFiles, self.choice_phase.GetSelection())
             if self.checkbox_kacey_dashboard.GetValue():
                 kacey_check = append_kacey_dashboard(ImportFiles, self.choice_phase.GetSelection())
-            if self.checkbox_jake_dashboard.GetValue():
-                # jake_check = append_jake_dashboard(ImportFiles, self.choice_1.GetSelection())
-                wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
+            # if self.checkbox_jake_dashboard.GetValue():
+            #     # jake_check = append_jake_dashboard(ImportFiles, self.choice_1.GetSelection())
+            #     wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
 
             if default_check and kacey_check and jake_check:    # if everything was successfully imported
                 wx.MessageBox(f"{self.text_ctrl_drag_drop.GetValue()}\n Was successfully imported!", "Done!",
