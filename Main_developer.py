@@ -29,6 +29,7 @@ DEFAULT = 0
 KACEY = 1
 JAKE = 2
 
+
 def check_for_duplicates(import_directory, imported_list):
     """This function checks if the file has already been imported"""
     for imp in imported_list:   # cycles through the directories of the previously imported files
@@ -54,47 +55,53 @@ def append_dashboard(import_directories, phase, people):
     """This function can import data using an external .xlsx map"""
     global user  # the current user
     box = None  # check for an unfinished phase
-    map_book = open_spreadsheet('Dashboard Mappings.xlsx')  # contains the cell to cell mapping
+    map_book = open_spreadsheet(f'C:/Users/{user}/SAV Digital Environments/SAV - Documents/Departments/'
+                                f'Accounting/Job Costing/00 Master Job Costing Sheet')  # contains the cell to cell mapping
     if not map_book:    # checks if map_book is empty
         return None
     map_sheet = map_book.active     # finds the active spreadsheet
     for i, person in enumerate(people):
         if person:
             if i == DEFAULT:
-                dashboard_directory = eval(map_sheet['A2'].value)
+                temp_string = map_sheet['A2'].value
+                print(temp_string)
+                print(eval(temp_string))
+                dashboard_directory = eval(temp_string)
                 import_cells = []
-                for cell in map_sheet['A3':]:
-                    import_cells.append(cell.value)
+                for cell in map_sheet['A3':'A17']:
+                    import_cells.append(cell[0].value)
                 export_cells = []
-                for cell in map_sheet['B3':]:
-                    export_cells.append(cell.value)
+                for cell in map_sheet['B3':'B17']:
+                    export_cells.append(cell[0].value)
                 phase_cells = []
-                for cell in map_sheet['C3':]:
-                    export_cells.append(cell.value)
+                for cell in map_sheet['C3':'C17']:
+                    export_cells.append(cell[0].value)
 
             elif i == KACEY:
-                dashboard_directory = eval({map_sheet['D2'].value})
+                temp_string = str(map_sheet['D2'].value)
+                dashboard_directory = eval(temp_string)
                 import_cells = []
-                for cell in map_sheet['D3':]:
-                    import_cells.append(cell.value)
+                for cell in map_sheet['D3':'D49']:
+                    import_cells.append(cell[0].value)
                 export_cells = []
-                for cell in map_sheet['E3':]:
-                    export_cells.append(cell.value)
+                for cell in map_sheet['E3':'E49']:
+                    export_cells.append(cell[0].value)
                 phase_cells = []
-                for cell in map_sheet['F3':]:
-                    export_cells.append(cell.value)
+                for cell in map_sheet['F3':'F49']:
+                    export_cells.append(cell[0].value)
 
             elif i == JAKE:
-                dashboard_directory = eval({map_sheet['G2'].value})
+                temp_string = str(map_sheet['G2'].value)
+                dashboard_directory = eval(temp_string)
                 import_cells = []
-                for cell in map_sheet['G3':]:
-                    import_cells.append(cell.value)
+                for cell in map_sheet['G3':'G49']:
+                    import_cells.append(cell[0].value)
                 export_cells = []
-                for cell in map_sheet['H3':]:
-                    export_cells.append(cell.value)
+                for cell in map_sheet['H3':'H49']:
+                    export_cells.append(cell[0].value)
                 phase_cells = []
-                for cell in map_sheet['I3':]:
-                    export_cells.append(cell.value)
+                for cell in map_sheet['I3':'I49']:
+                    export_cells.append(cell[0].value)
             else:
                 return "code error: not valid export spreadsheet ID/Name"
 
@@ -113,8 +120,10 @@ def append_dashboard(import_directories, phase, people):
                     if cell.value == import_dir and (phase == ROUGH_PHASE or dashboard.active[f'E{cell.row}']):
                         open_data_sheet = f"Name:{import_sheet['D2'].value}\nLocation:{import_sheet['D3'].value}\n" \
                                           f"PM:{import_sheet['D4'].value}\nDirectory:{import_dir}"
-                        dialog = DatasheetAlreadyImportedDialog(open_data_sheet, dashboard.active[f'AU{cell.row}'].value,
-                                                                dashboard.active[f'AV{cell.row}'].value, None, wx.ID_ANY, "")
+                        dialog = DatasheetAlreadyImportedDialog(open_data_sheet,
+                                                                dashboard.active[f'AU{cell.row}'].value,
+                                                                dashboard.active[f'AV{cell.row}'].value,
+                                                                None, wx.ID_ANY, "")
 
                         change_row = dialog.ShowModal()
                         if change_row == -2:
@@ -136,10 +145,14 @@ def append_dashboard(import_directories, phase, people):
                                                     f"Do you want to import it to kacey's dashboard anyways?",
                                                     "Empty Import",
                                                     wx.YES_NO | wx.ICON_INFORMATION)
-
                                 if import_sheet['D5'].value or box == CONTINUE:  # if we continue
-                                    dashboard.active[f'{export_cell}{change_row}'].value = \
-                                        import_sheet[import_cell].value  # cell to cell transfer
+                                    # create a list of all the cells we want to add together
+                                    add_cells = import_sheet[import_cell].value.split('+')
+                                    # start at 0 and add every cell
+                                    dashboard.active[f'{export_cell}{change_row}'].value = 0
+                                    for add_cell in add_cells:
+                                        dashboard.active[f'{export_cell}{change_row}'].value += \
+                                            import_sheet[add_cell].value  # cell to cell transfer
 
                         if phase_cell == 'finish' and phase == FINISH_PHASE:
                             if not import_sheet['D6'].value:  # if the finish phase doesn't have a completed date
@@ -150,17 +163,23 @@ def append_dashboard(import_directories, phase, people):
                                                     wx.YES_NO | wx.ICON_INFORMATION)
 
                             if import_sheet['D6'].value or box == CONTINUE:  # if we continue
-                                dashboard.active[f'{export_cell}{change_row}'].value = \
-                                    import_sheet[import_cell].value  # cell to cell transfer
+                                # create a list of all the cells we want to add together
+                                add_cells = import_sheet[import_cell].value.split('+')
+                                # start at 0 and add every cell
+                                dashboard.active[f'{export_cell}{change_row}'].value = 0
+                                for add_cell in add_cells:
+                                    dashboard.active[f'{export_cell}{change_row}'].value += \
+                                        import_sheet[import_cell].value  # cell to cell transfer
 
-                        if phase_cell == 'meta':
+                        if phase_cell == 'meta':    # for record keeping
+                            temp_string = str(import_sheet[import_cell].value)
                             dashboard.active[f'{export_cell}{change_row}'].value = \
-                                eval(import_sheet[import_cell].value)  # cell to cell transfer
+                                eval(temp_string)  # cell to cell transfer
 
-    dashboard.save(dashboard_directory)
+            dashboard.save(dashboard_directory)
     return True
 
-
+# outdated
 def append_kacey_dashboard(import_directories, phase):
     """This function can import data to kacey's dashboard"""
     global user  # the current user
@@ -281,7 +300,7 @@ def append_kacey_dashboard(import_directories, phase):
     dashboard.save(dashboard_directory)
     return True
 
-
+# outdated
 def append_default_dashboard(import_directories, phase):
     """This function can import data to kacey's dashboard"""
     global user  # the current user
@@ -446,7 +465,7 @@ class FirstFrame(wx.Frame):
         self.choice_phase.SetSelection(0)
         self.checkbox_general_dashboard.SetValue(1)
         self.checkbox_kacey_dashboard.SetValue(1)
-        self.checkbox_jake_dashboard.SetValue(0)
+        self.checkbox_jake_dashboard.SetValue(1)
 
     def __do_layout(self):
         sizer_5 = wx.BoxSizer(wx.VERTICAL)
@@ -527,8 +546,8 @@ class FirstFrame(wx.Frame):
 
     def on_jakes_master_dashboard_checkbox(self, event):  # event handler
         print(self.checkbox_jake_dashboard.GetValue())
-        wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
-        self.checkbox_jake_dashboard.SetValue(0)
+        # wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
+        # self.checkbox_jake_dashboard.SetValue(0)
         event.Skip()
 
     def on_continue_from_main_window(self, event):  # event handler
@@ -538,22 +557,12 @@ class FirstFrame(wx.Frame):
         elif not ImportFiles:
             wx.MessageBox("Please choose a file to import.", "Error", wx.OK | wx.ICON_INFORMATION)
         else:
-            # for tracking if something went wrong
-            jake_check = kacey_check = default_check = True
             people = [self.checkbox_general_dashboard.GetValue(),
                       self.checkbox_kacey_dashboard.GetValue(),
                       self.checkbox_jake_dashboard.GetValue()]
             all_check = append_dashboard(ImportFiles, self.choice_phase.GetSelection(), people)
 
-            if self.checkbox_general_dashboard.GetValue():
-                default_check = append_default_dashboard(ImportFiles, self.choice_phase.GetSelection())
-            if self.checkbox_kacey_dashboard.GetValue():
-                kacey_check = append_kacey_dashboard(ImportFiles, self.choice_phase.GetSelection())
-            if self.checkbox_jake_dashboard.GetValue():
-                # jake_check = append_jake_dashboard(ImportFiles, self.choice_1.GetSelection())
-                wx.MessageBox("Jake's dashboard not yet implemented.", "Error", wx.OK | wx.ICON_INFORMATION)
-
-            if default_check and kacey_check and jake_check:    # if everything was successfully imported
+            if all_check:    # if everything was successfully imported
                 wx.MessageBox(f"{self.text_ctrl_drag_drop.GetValue()}\n Was successfully imported!", "Done!",
                               wx.OK | wx.ICON_INFORMATION)
             else:
