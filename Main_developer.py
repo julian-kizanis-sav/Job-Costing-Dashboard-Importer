@@ -25,7 +25,9 @@ FINISH_PHASE = 2
 CONTINUE = 2
 OVERRIDE = -2
 CANCEL = -1
-
+DEFAULT = 0
+KACEY = 1
+JAKE = 2
 
 def check_for_duplicates(import_directory, imported_list):
     """This function checks if the file has already been imported"""
@@ -48,7 +50,7 @@ def open_spreadsheet(directory):
                 return None
 
 
-def append_dashboard(import_directories, phase, person):
+def append_dashboard(import_directories, phase, people):
     """This function can import data using an external .xlsx map"""
     global user  # the current user
     box = None  # check for an unfinished phase
@@ -56,135 +58,104 @@ def append_dashboard(import_directories, phase, person):
     if not map_book:    # checks if map_book is empty
         return None
     map_sheet = map_book.active     # finds the active spreadsheet
-    if person == 'default':
-        dashboard_directory = f"{map_sheet['A2'].value}"
-        import_cells = []
-        for cell in map_sheet['A3':]:
-            import_cells.append(cell.value)
-        export_cells = []
-        for cell in map_sheet['B3':]:
-            export_cells.append(cell.value)
+    for i, person in enumerate(people):
+        if person:
+            if i == DEFAULT:
+                dashboard_directory = eval(map_sheet['A2'].value)
+                import_cells = []
+                for cell in map_sheet['A3':]:
+                    import_cells.append(cell.value)
+                export_cells = []
+                for cell in map_sheet['B3':]:
+                    export_cells.append(cell.value)
+                phase_cells = []
+                for cell in map_sheet['C3':]:
+                    export_cells.append(cell.value)
 
-    elif person == 'kacey':
-        dashboard_directory = f"{map_sheet['C2'].value}"
-        import_cells = []
-        for cell in map_sheet['C3':]:
-            import_cells.append(cell.value)
-        export_cells = []
-        for cell in map_sheet['D3':]:
-            export_cells.append(cell.value)
+            elif i == KACEY:
+                dashboard_directory = eval({map_sheet['D2'].value})
+                import_cells = []
+                for cell in map_sheet['D3':]:
+                    import_cells.append(cell.value)
+                export_cells = []
+                for cell in map_sheet['E3':]:
+                    export_cells.append(cell.value)
+                phase_cells = []
+                for cell in map_sheet['F3':]:
+                    export_cells.append(cell.value)
 
-    elif person == 'jake':
-        dashboard_directory = f"{map_sheet['E2'].value}"
-        import_cells = []
-        for cell in map_sheet['E3':]:
-            import_cells.append(cell.value)
-        export_cells = []
-        for cell in map_sheet['F3':]:
-            export_cells.append(cell.value)
-    else:
-        return "code error: not valid export spreadsheet ID/Name"
+            elif i == JAKE:
+                dashboard_directory = eval({map_sheet['G2'].value})
+                import_cells = []
+                for cell in map_sheet['G3':]:
+                    import_cells.append(cell.value)
+                export_cells = []
+                for cell in map_sheet['H3':]:
+                    export_cells.append(cell.value)
+                phase_cells = []
+                for cell in map_sheet['I3':]:
+                    export_cells.append(cell.value)
+            else:
+                return "code error: not valid export spreadsheet ID/Name"
 
-    dashboard = open_spreadsheet(dashboard_directory)
-    if not dashboard:
-        return None
-    for imp in import_directories:
-        import_book = open_spreadsheet(imp)
-        if not import_book:
-            return None
-        import_sheet = import_book['Data-Calculations']
+            dashboard = open_spreadsheet(dashboard_directory)
+            if not dashboard:
+                return None
+            for import_dir in import_directories:
+                import_book = open_spreadsheet(import_dir)
+                if not import_book:
+                    return None
+                import_sheet = import_book['Data-Calculations']
 
-        change_row = 0
-        last_row = 0
-        for cell in dashboard.active['AT']:
-            if cell.value == imp and (phase == ROUGH_PHASE or dashboard.active[f'E{cell.row}']):
-                open_data_sheet = f"Name:{import_sheet['D2'].value}\nLocation:{import_sheet['D3'].value}\n" \
-                                  f"PM:{import_sheet['D4'].value}\nDirectory:{imp}"
-                dialog = DatasheetAlreadyImportedDialog(open_data_sheet, dashboard.active[f'AU{cell.row}'].value,
-                                                        dashboard.active[f'AV{cell.row}'].value, None, wx.ID_ANY, "")
+                change_row = 0
+                last_row = 0
+                for cell in dashboard.active['AT']:
+                    if cell.value == import_dir and (phase == ROUGH_PHASE or dashboard.active[f'E{cell.row}']):
+                        open_data_sheet = f"Name:{import_sheet['D2'].value}\nLocation:{import_sheet['D3'].value}\n" \
+                                          f"PM:{import_sheet['D4'].value}\nDirectory:{import_dir}"
+                        dialog = DatasheetAlreadyImportedDialog(open_data_sheet, dashboard.active[f'AU{cell.row}'].value,
+                                                                dashboard.active[f'AV{cell.row}'].value, None, wx.ID_ANY, "")
 
-                change_row = dialog.ShowModal()
-                if change_row == -2:
-                    change_row = cell.row
-            if cell.value:
-                last_row = cell.row
+                        change_row = dialog.ShowModal()
+                        if change_row == -2:
+                            change_row = cell.row
+                    if cell.value:
+                        last_row = cell.row
 
-        if change_row == 0:
-            if last_row == 0:
-                return "data sheet error: first row empty"
-            change_row = last_row + 1
-            print(f"change_row:{change_row}")
-        if change_row != CANCEL:
-            if not import_sheet['D5'].value:
-                box = wx.MessageBox(f"Rough phase for {import_sheet['D2'].value} is not finished; "
-                                    f"Do you want to import it anyways?", "Empty Import",
-                                    wx.YES_NO | wx.ICON_INFORMATION)
-            if import_sheet['D5'].value or box == 2:
-                dashboard.active[f'A{change_row}'].value = import_sheet['D3'].value
-                dashboard.active[f'B{change_row}'].value = import_sheet['D2'].value
-                dashboard.active[f'C{change_row}'].value = import_sheet['D4'].value
-                dashboard.active[f'D{change_row}'].value = import_sheet['D5'].value
-                dashboard.active[f'R{change_row}'].value = import_sheet['N13'].value
-                dashboard.active[f'S{change_row}'].value = import_sheet['O13'].value
-                dashboard.active[f'T{change_row}'].value = import_sheet['P13'].value
-                dashboard.active[f'X{change_row}'].value = import_sheet['D47'].value
-                dashboard.active[f'Y{change_row}'].value = import_sheet['E47'].value
-                dashboard.active[f'Z{change_row}'].value = import_sheet['F47'].value
-                dashboard.active[f'AT{change_row}'].value = imp
+                if change_row == 0:
+                    if last_row == 0:
+                        return "data sheet error: first row empty"
+                    change_row = last_row + 1
+                    print(f"change_row:{change_row}")
+                if change_row != CANCEL:
+                    for import_cell, export_cell, phase_cell in import_cells, export_cells, phase_cells:
+                        if phase_cell == 'rough':
+                            if not import_sheet['D5'].value:  # if the rough phase doesn't have a completed date
+                                # create a popup asking if we want to import an incomplete rough phase
+                                box = wx.MessageBox(f"Rough phase for {import_sheet['D2'].value} is not finished; "
+                                                    f"Do you want to import it to kacey's dashboard anyways?",
+                                                    "Empty Import",
+                                                    wx.YES_NO | wx.ICON_INFORMATION)
 
-            if FINISH_PHASE == phase:
-                if not import_sheet['D6'].value:
-                    box = wx.MessageBox(f"Finish phase for {import_sheet['D2'].value} is not finished; "
-                                        f"Do you want to import it anyways?", "Empty Import",
-                                        wx.YES_NO | wx.ICON_INFORMATION)
+                                if import_sheet['D5'].value or box == CONTINUE:  # if we continue
+                                    dashboard.active[f'{export_cell}{change_row}'].value = \
+                                        import_sheet[import_cell].value  # cell to cell transfer
 
-                if import_sheet['D6'].value or box == 2:
-                    dashboard.active[f'E{change_row}'].value = import_sheet['D6'].value
-                    dashboard.active[f'F{change_row}'].value = import_sheet['N26'].value
-                    dashboard.active[f'G{change_row}'].value = import_sheet['O26'].value
-                    dashboard.active[f'H{change_row}'].value = import_sheet['P26'].value
-                    dashboard.active[f'I{change_row}'].value = import_sheet['D34'].value
-                    dashboard.active[f'J{change_row}'].value = import_sheet['E34'].value
-                    dashboard.active[f'K{change_row}'].value = import_sheet['F34'].value
-                    dashboard.active[f'L{change_row}'].value = import_sheet['D35'].value
-                    dashboard.active[f'M{change_row}'].value = import_sheet['E35'].value
-                    dashboard.active[f'N{change_row}'].value = import_sheet['F35'].value
-                    dashboard.active[f'O{change_row}'].value = import_sheet['D36'].value
-                    dashboard.active[f'P{change_row}'].value = import_sheet['E36'].value
-                    dashboard.active[f'Q{change_row}'].value = import_sheet['F36'].value
-                    dashboard.active[f'U{change_row}'].value = import_sheet['N21'].value
-                    dashboard.active[f'V{change_row}'].value = import_sheet['O21'].value
-                    dashboard.active[f'W{change_row}'].value = import_sheet['P21'].value
-                    dashboard.active[f'AA{change_row}'].value = import_sheet['D59'].value
-                    dashboard.active[f'AB{change_row}'].value = import_sheet['E59'].value
-                    dashboard.active[f'AC{change_row}'].value = import_sheet['F59'].value
-                    dashboard.active[f'AD{change_row}'].value = import_sheet['D34'].value
-                    dashboard.active[f'AE{change_row}'].value = import_sheet['L34'].value
-                    dashboard.active[f'AF{change_row}'].value = import_sheet['M34'].value
-                    dashboard.active[f'AG{change_row}'].value = \
-                        import_sheet['D42'].value + import_sheet['D53'].value
-                    dashboard.active[f'AH{change_row}'].value = \
-                        import_sheet['E42'].value + import_sheet['E53'].value
-                    dashboard.active[f'AI{change_row}'].value = \
-                        import_sheet['F42'].value + import_sheet['F53'].value
-                    dashboard.active[f'AJ{change_row}'].value = \
-                        import_sheet['D44'].value + import_sheet['D46'].value + \
-                        import_sheet['D55'].value + import_sheet['D57'].value
-                    dashboard.active[f'AK{change_row}'].value = \
-                        import_sheet['E44'].value + import_sheet['E46'].value + \
-                        import_sheet['E55'].value + import_sheet['E57'].value
-                    dashboard.active[f'AL{change_row}'].value = \
-                        import_sheet['F44'].value + import_sheet['F46'].value + \
-                        import_sheet['F55'].value + import_sheet['F57'].value
-                    dashboard.active[f'AM{change_row}'].value = \
-                        import_sheet['D45'].value + import_sheet['D56'].value
-                    dashboard.active[f'AN{change_row}'].value = \
-                        import_sheet['E45'].value + import_sheet['E56'].value
-                    dashboard.active[f'AO{change_row}'].value = \
-                        import_sheet['F45'].value + import_sheet['F56'].value
-                    dashboard.active[f'AP{change_row}'].value = import_sheet['D73'].value
-                    dashboard.active[f'AQ{change_row}'].value = import_sheet['E73'].value
-                    dashboard.active[f'AR{change_row}'].value = import_sheet['F73'].value
+                        if phase_cell == 'finish' and phase == FINISH_PHASE:
+                            if not import_sheet['D6'].value:  # if the finish phase doesn't have a completed date
+                                # create a popup asking if we want to import an incomplete rough phase
+                                box = wx.MessageBox(f"Finish phase for {import_sheet['D2'].value} is not finished; "
+                                                    f"Do you want to import it to kacey's dashboard anyways?",
+                                                    "Empty Import",
+                                                    wx.YES_NO | wx.ICON_INFORMATION)
+
+                            if import_sheet['D6'].value or box == CONTINUE:  # if we continue
+                                dashboard.active[f'{export_cell}{change_row}'].value = \
+                                    import_sheet[import_cell].value  # cell to cell transfer
+
+                        if phase_cell == 'meta':
+                            dashboard.active[f'{export_cell}{change_row}'].value = \
+                                eval(import_sheet[import_cell].value)  # cell to cell transfer
 
     dashboard.save(dashboard_directory)
     return True
@@ -361,7 +332,7 @@ def append_default_dashboard(import_directories, phase):
 
             if import_sheet['D5'].value or box == CONTINUE:     # if we continue
                 dashboard.active[f'R{change_row}'].value = user
-                dashboard.active[f's{change_row}'].value = date.today()
+                dashboard.active[f'S{change_row}'].value = date.today()
                 dashboard.active[f'A{change_row}'].value = import_sheet['D2'].value     # cell to cell transfer
                 dashboard.active[f'B{change_row}'].value = import_sheet['D4'].value
                 dashboard.active[f'C{change_row}'].value = import_sheet['D5'].value
@@ -569,6 +540,11 @@ class FirstFrame(wx.Frame):
         else:
             # for tracking if something went wrong
             jake_check = kacey_check = default_check = True
+            people = [self.checkbox_general_dashboard.GetValue(),
+                      self.checkbox_kacey_dashboard.GetValue(),
+                      self.checkbox_jake_dashboard.GetValue()]
+            all_check = append_dashboard(ImportFiles, self.choice_phase.GetSelection(), people)
+
             if self.checkbox_general_dashboard.GetValue():
                 default_check = append_default_dashboard(ImportFiles, self.choice_phase.GetSelection())
             if self.checkbox_kacey_dashboard.GetValue():
