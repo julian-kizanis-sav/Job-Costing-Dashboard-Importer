@@ -9,7 +9,6 @@ from ntpath import basename
 
 import wx
 from openpyxl import load_workbook
-from openpyxl.styles import Alignment
 
 # Declare GUI Constants
 MENU_FILE_EXIT = wx.ID_ANY
@@ -51,7 +50,6 @@ def open_spreadsheet(directory):
 
 def append_dashboard(import_directories, phase, person):
     """This function can import data using an external .xlsx map"""
-    # Not currently used, as there are some bugs. However, this is a better way to do things
     global user  # the current user
     box = None  # check for an unfinished phase
     map_book = open_spreadsheet('Dashboard Mappings.xlsx')  # contains the cell to cell mapping
@@ -473,6 +471,7 @@ class FirstFrame(wx.Frame):
 
         self.__set_properties()
         self.__do_layout()
+
         self.SetMinSize((345, 345))
 
         # initializes the events
