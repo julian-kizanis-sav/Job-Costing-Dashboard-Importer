@@ -1,0 +1,11 @@
+,Index_dtools,Manufacturer[0],Model[0],Part_dtools,Cost_dtools,Price_dtools,Used_dtools,Match Ratio,Index[1],Manufacturer[1],Model[1],Part[1],Cost[1],Price[1],Used[1],Match,Keep,Model_dtools
+6,123,APRILAIRE,,'8083,104.0,208.0,False,100.0,0,aprilaire,8083,,104.0,$208.00 ,False,False,True,'8083
+7,124,APRILAIRE,,'8811,103.6,207.2,False,100.0,15,aprilaire,8811,,103.6,$207.20 ,False,False,True,'8811
+8,125,APRILAIRE,,'8819,109.0,218.0,False,100.0,17,aprilaire,8819,,109.0,$218.00 ,False,False,True,'8819
+9,126,APRILAIRE,,'8820,198.9,397.8,False,100.0,18,aprilaire,8820,,198.9,$397.80 ,False,False,True,'8820
+5,122,APRILAIRE,,'8081,74.03,148.05,False,75.0,0,aprilaire,8083,,104.0,$208.00 ,False,False,True,'8081
+0,117,APRILAIRE,,'6403,220.0,300.0,False,52.333333333333336,10,aprilaire,8620,,139.075,$278.15 ,False,False,True,'6403
+1,118,APRILAIRE,,'6404,230.0,313.6506,False,52.333333333333336,10,aprilaire,8620,,139.075,$278.15 ,False,False,True,'6404
+2,119,APRILAIRE,,'8029,15.9,31.8,False,50.0,0,aprilaire,8083,,104.0,$208.00 ,False,False,True,'8029
+3,120,APRILAIRE,,'8051,15.63,31.25,False,50.0,0,aprilaire,8083,,104.0,$208.00 ,False,False,True,'8051
+4,121,APRILAIRE,,'8052,5.18,10.35,False,50.0,0,aprilaire,8083,,104.0,$208.00 ,False,False,True,'8052
