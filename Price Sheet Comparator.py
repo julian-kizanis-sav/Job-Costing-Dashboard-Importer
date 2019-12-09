@@ -20,8 +20,6 @@ MENU_FILE_EXIT = wx.ID_ANY
 DRAG_SOURCE = wx.ID_ANY
 
 # Global Variables
-import_files = []
-user = getuser()
 pb = False
 
 # Global Constants
@@ -44,18 +42,18 @@ def new_window_loop(local_import_files, compare_type, compare_list, import_list)
     new_window.MainLoop()
 
 
-def sheet_compare(daemon_window, local_import_files, compare_type, compare_list, import_list):
-
+def sheet_compare(daemon_window, local_import_files, compare_type, individual_list, master_list):
+    manufacturers = []
     pandas_matches = panda_match_ini()
+    pandas_perfect_matches = panda_match_ini()
+    pandas_uncertain_matches = panda_match_ini()
     index_matches = 0
     pandas_dtools = None
     # still_running = RunningComparisonsDialog(None, wx.ID_ANY, "")
     # still_running.Show()
     start_time = time.time()
-    print(111111)
     print(local_import_files)
     for file in local_import_files:
-        print(12121212)
         if file is local_import_files[0]:
             try:
                 pandas_dtools = pd.read_csv(file)
@@ -66,7 +64,6 @@ def sheet_compare(daemon_window, local_import_files, compare_type, compare_list,
                 return False
         try:
             pandas_vendor = pd.read_csv(file)
-            print(pandas_dtools, pandas_vendor)
         except UnicodeDecodeError:
             wx.MessageBox("Please save your 'CSV (Comma delimited) (*.csv)' file as "
                           "a 'CSV UTF-8 (Comma delimited) (*.csv)' file.", "Error", wx.OK | wx.ICON_INFORMATION)
@@ -75,16 +72,18 @@ def sheet_compare(daemon_window, local_import_files, compare_type, compare_list,
             for index_dtools, part_dtools in enumerate(pandas_dtools.loc[:, 'Model']):
                 pandas_matches = match_new_row(pandas_matches, pandas_dtools, index_dtools)
                 for index_vendor, part_vendor in enumerate(pandas_vendor.loc[:, 'Model']):
-                    if not (pandas_vendor.loc[index_vendor, 'Manufacturer'] or
-                            pandas_vendor.loc[index_vendor, 'Model'] or
-                            pandas_vendor.loc[index_vendor, 'Cost'] or
-                            pandas_vendor.loc[index_vendor, 'Price']):
+                    if not (pandas_vendor.loc[index_vendor, 'Manufacturer'] and
+                            pandas_vendor.loc[index_vendor, 'Model'] and
+                            pandas_vendor.loc[index_vendor, 'Unit Cost'] and
+                            pandas_vendor.loc[index_vendor, 'Unit Price']):
                         continue
-                    pro_dtool_part = part_dtools.lower().strip(' -_()/')
-                    pro_vendor_part = part_vendor.lower().strip(' -_()/')
-                    temp_match_ratio = fuzz.partial_ratio(pro_dtool_part, pro_vendor_part) + \
-                                       fuzz.ratio(pro_dtool_part, pro_vendor_part) + \
-                                       fuzz.token_sort_ratio(part_dtools, part_vendor) / 3
+                    if not manufacturers:
+                        manufacturers.append(pandas_vendor.loc[index_vendor, 'Manufacturer'])
+                    pro_dtool_part = str(part_dtools).lower().strip(" -_(')/")
+                    pro_vendor_part = str(part_vendor).lower().strip(" -_(')/")
+                    temp_match_ratio = (fuzz.partial_ratio(pro_dtool_part, pro_vendor_part) +
+                                        fuzz.ratio(pro_dtool_part, pro_vendor_part) +
+                                        fuzz.token_sort_ratio(part_dtools, part_vendor)) / 3
                     if temp_match_ratio > pandas_matches.loc[index_dtools, 'Match Ratio']:
                         new_best_match(pandas_matches, index_dtools, temp_match_ratio, pandas_vendor, index_vendor)
 
@@ -94,9 +93,9 @@ def sheet_compare(daemon_window, local_import_files, compare_type, compare_list,
                     daemon_window.list_ctrl_1.EnsureVisible(daemon_window.list_ctrl_1.GetItemCount() - 1)
                     daemon_window.Update()
                 print(part_dtools, index_dtools)
+            pandas_matches = pandas_matches.sort_values('Match Ratio', ascending=False)
         elif compare_type == DISCONTINUED_SEARCH:
-            print(22222222)
-            manufacturers = []
+            # manufacturers = []
             index_manufacturers = 0
             for manufacturer_vendor in pandas_vendor.loc[:, 'Manufacturer']:
                 if not manufacturers:
@@ -104,62 +103,99 @@ def sheet_compare(daemon_window, local_import_files, compare_type, compare_list,
                 elif manufacturer_vendor != manufacturers[index_manufacturers]:
                     index_manufacturers += 1
                     manufacturers.append(manufacturer_vendor)
-            print(manufacturers)
             for manufacturer in manufacturers:
-                print(3333333333)
                 for index_dtools, part_dtools in enumerate(pandas_dtools.loc[:, 'Model']):
-                    if manufacturer == pandas_dtools.loc[index_dtools, 'Manufacturer']:
+                    number_dtools = pandas_dtools.loc[index_dtools, 'Part Number']
+                    if manufacturer.lower() == pandas_dtools.loc[index_dtools, 'Manufacturer'].lower():
                         pandas_matches = match_new_row(pandas_matches, pandas_dtools, index_dtools)
                         for index_vendor, part_vendor in enumerate(pandas_vendor.loc[:, 'Model']):
-                            if not (pandas_vendor.loc[index_vendor, 'Manufacturer'] or
-                                    pandas_vendor.loc[index_vendor, 'Model'] or
-                                    pandas_vendor.loc[index_vendor, 'Cost'] or
-                                    pandas_vendor.loc[index_vendor, 'Price']):
+                            if not (pandas_vendor.loc[index_vendor, 'Manufacturer'] and
+                                    pandas_vendor.loc[index_vendor, 'Model'] and
+                                    pandas_vendor.loc[index_vendor, 'Unit Cost'] and
+                                    pandas_vendor.loc[index_vendor, 'Unit Price']):
                                 continue
-                            pro_dtool_part = part_dtools.lower().strip(' -_()/')
-                            pro_vendor_part = part_vendor.lower().strip(' -_()/')
-                            temp_match_ratio = fuzz.partial_ratio(pro_dtool_part, pro_vendor_part) + \
-                                               fuzz.ratio(pro_dtool_part, pro_vendor_part) + \
-                                               fuzz.token_sort_ratio(part_dtools, part_vendor) / 3
+                            pro_dtool_part = str(part_dtools).lower().strip(" -_(')/")
+                            pro_vendor_part = str(part_vendor).lower().strip(" -_(')/")
+
+                            temp_match_ratio = (fuzz.partial_ratio(pro_dtool_part, pro_vendor_part) +
+                                                fuzz.ratio(pro_dtool_part, pro_vendor_part) +
+                                                fuzz.token_sort_ratio(part_dtools, part_vendor)) / 3
                             if temp_match_ratio > pandas_matches.loc[index_matches, 'Match Ratio']:
                                 new_best_match(pandas_matches, index_matches, temp_match_ratio, pandas_vendor,
                                                index_vendor)
+                            if number_dtools:
+                                pro_dtool_number = str(number_dtools).lower().strip(" -_(')/")
+                                temp_match_ratio = (fuzz.partial_ratio(pro_dtool_number, pro_vendor_part) +
+                                                    fuzz.ratio(pro_dtool_number, pro_vendor_part) +
+                                                    fuzz.token_sort_ratio(number_dtools, part_vendor)) / 3
+                                if temp_match_ratio > pandas_matches.loc[index_matches, 'Match Ratio']:
+                                    new_best_match(pandas_matches, index_matches, temp_match_ratio, pandas_vendor,
+                                                   index_vendor)
 
-                        print(part_dtools, index_matches)
+                        # print(part_dtools, index_matches)
                         daemon_window.list_ctrl_1.Append((manufacturer, part_dtools,
                                                           pandas_matches.loc[index_matches, 'Match Ratio'],
                                                           time.time() - start_time, index_matches))
                         daemon_window.list_ctrl_1.EnsureVisible(daemon_window.list_ctrl_1.GetItemCount() - 1)
                         daemon_window.Update()
                         index_matches += 1
-    if compare_list:
-        pandas_matches = pandas_matches.sort_values('Match Ratio', ascending=False)
-        pandas_matches.to_csv(f'Dealer Import Compare Sheet {date.today()}.csv')
-    if import_list:
-        print("TODO")
+
+                for index_matches, match_ratio in enumerate(pandas_matches.loc[:, 'Match Ratio']):
+                    if match_ratio == 100:
+                        pandas_perfect_matches = pandas_perfect_matches.append(pandas_matches.loc[index_matches, :])
+                    else:
+                        pandas_uncertain_matches = pandas_uncertain_matches.append(pandas_matches.loc[index_matches, :])
+                pandas_matches = pandas_matches.sort_values('Match Ratio', ascending=False)
+                pandas_uncertain_matches = pandas_uncertain_matches.sort_values('Match Ratio', ascending=False)
+
+        else:
+            print("Error: ")
+            return False
+    # pandas_matches = pandas_matches.sort_values('Match Ratio', ascending=False)
+    if individual_list:
+        print(manufacturers[0])
+        pandas_matches.to_csv(f"Comparator Output/Dealer Import Compare Sheet ({manufacturers[0]}) {date.today()}.csv",
+                              index=False)
+        print("saved")
+    if master_list:
+        try:
+            pandas_master = pd.read_csv("Comparator Output/__Master Dealer Import Compare Sheet.csv")
+            pandas_master_perfect = pd.read_csv("Comparator Output/__Perfect Master Dealer Import Compare Sheet.csv")
+            pandas_master_uncertain = \
+                pd.read_csv("Comparator Output/__Uncertain Master Dealer Import Compare Sheet.csv")
+        except FileNotFoundError:
+            return False
+        pandas_master = pd.concat([pandas_master, pandas_matches], axis=0, sort=False)
+        pandas_master_perfect = pd.concat([pandas_master_perfect, pandas_perfect_matches], axis=0, sort=False)
+        pandas_master_uncertain = pd.concat([pandas_master_uncertain, pandas_uncertain_matches], axis=0, sort=False)
+        # pandas_master = pandas_master.sort_values('Match Ratio', ascending=False)
+        pandas_master.to_csv("Comparator Output/__Master Dealer Import Compare Sheet.csv", index=False)
+        pandas_master_perfect.to_csv("Comparator Output/__Perfect Master Dealer Import Compare Sheet.csv", index=False)
+        pandas_master_uncertain.to_csv("Comparator Output/__Uncertain Master Dealer Import Compare Sheet.csv",
+                                       index=False)
     wx.MessageBox("Done!", "Done!", wx.OK | wx.ICON_INFORMATION)
     return pandas_matches
 
 
 def panda_match_ini():
-    match = pd.DataFrame(columns={'Index[0]', 'Manufacturer[0]', 'Model[0]',
-                                  'Part[0]', 'Cost[0]', 'Price[0]', 'Used[0]',
+    match = pd.DataFrame(columns={'Index_dtools', 'Manufacturer_dtools', 'Model_dtools',
+                                  'Part_dtools', 'Cost_dtools', 'Price_dtools', 'Used_dtools',
                                   'Match Ratio', 'Index[1]', 'Manufacturer[1]',
                                   'Model[1]', 'Part[1]', 'Cost[1]', 'Price[1]', 'Used[1]', 'Match', 'Keep'})
 
-    return match[['Index[0]', 'Manufacturer[0]', 'Model[0]',
-                  'Part[0]', 'Cost[0]', 'Price[0]', 'Used[0]',
+    return match[['Index_dtools', 'Manufacturer_dtools', 'Model_dtools',
+                  'Part_dtools', 'Cost_dtools', 'Price_dtools', 'Used_dtools',
                   'Match Ratio', 'Index[1]', 'Manufacturer[1]',
                   'Model[1]', 'Part[1]', 'Cost[1]', 'Price[1]', 'Used[1]', 'Match', 'Keep']]
 
 
 def match_new_row(pandas_match, pandas_import, index):
-    return pandas_match.append({'Index[0]': index, 'Manufacturer[0]': pandas_import.loc[index, "Manufacturer"],
-                                'Model[0]': pandas_import.loc[index, "Model"],
-                                'Part[0]': pandas_import.loc[index, "Part Number"],
-                                'Cost[0]': pandas_import.loc[index, "Unit Cost"],
-                                'Price[0]': pandas_import.loc[index, "Unit Price"],
-                                'Used[0]': False, 'Match Ratio': 0, 'Index[1]': 0, 'Manufacturer[1]': "",
+    return pandas_match.append({'Index_dtools': index, 'Manufacturer_dtools': pandas_import.loc[index, "Manufacturer"],
+                                'Model_dtools': pandas_import.loc[index, "Model"],
+                                'Part_dtools': pandas_import.loc[index, "Part Number"],
+                                'Cost_dtools': pandas_import.loc[index, "Unit Cost"],
+                                'Price_dtools': pandas_import.loc[index, "Unit Price"],
+                                'Used_dtools': False, 'Match Ratio': 0, 'Index[1]': 0, 'Manufacturer[1]': "",
                                 'Model[1]': "", 'Part[1]': "", 'Cost[1]': 0, 'Price[1]': 0, 'Used[1]': False,
                                 'Match': False, 'Keep': True},
                                ignore_index=True)
@@ -202,36 +238,36 @@ def open_spreadsheet(directory):
 class FileDropTarget(wx.FileDropTarget):
     """ This object implements Drop Target functionality for Files """
 
-    def __init__(self, obj):
+    def __init__(self, text_ctrl, import_files):
         """ Initialize the Drop Target, passing in the Object Reference to
         indicate what should receive the dropped files """
         # Initialize the wxFileDropTarget Object
         wx.FileDropTarget.__init__(self)
         # Store the Object Reference for dropped files
-        self.obj = obj
+        self.text_ctrl = text_ctrl
+        self.import_files = import_files
 
     def OnDropFiles(self, x, y, file_names):
         """ Implement File Drop """
         # Move Insertion Point to the end of the widget's text
-        self.obj.SetInsertionPointEnd()
+        self.text_ctrl.SetInsertionPointEnd()
         # append a list of the file names dropped
-        global import_files
         dup_check = False
         for file in file_names:
-            for iFile in import_files:
+            for iFile in self.import_files:
                 if file == iFile:
                     dup_check = True
             if not file.endswith('.csv'):
                 wx.MessageBox("Incorrect file type. Please choose an .csv file.", "Error", wx.OK | wx.ICON_INFORMATION)
                 continue
             if not dup_check:
-                self.obj.WriteText(basename(file) + '\n')
-                import_files.append(file)
+                self.text_ctrl.WriteText(basename(file) + '\n')
+                self.import_files.append(file)
             else:
                 print("Removed duplicate import file!")
                 wx.MessageBox("File already in import list.", "Error", wx.OK | wx.ICON_INFORMATION)
                 dup_check = False
-        self.obj.WriteText('\n')
+        self.text_ctrl.WriteText('\n')
 
 
 class FirstFrame(wx.Frame):
@@ -242,20 +278,21 @@ class FirstFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
 
         self.compare_process = []
+        self.import_files = []
 
         self.SetSize((640, 428))
         self.button_browse = wx.FilePickerCtrl(self)
         # self.button_4.Bind(wx.EVT_FILEPICKER_CHANGED, self.on_choose_file)
         self.text_ctrl_drag_drop = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_MULTILINE | wx.TE_READONLY)
-        drop_target = FileDropTarget(self.text_ctrl_drag_drop)
+        drop_target = FileDropTarget(self.text_ctrl_drag_drop, self.import_files)
         # Link the Drop Target Object to the Text Control
         self.text_ctrl_drag_drop.SetDropTarget(drop_target)
 
         # initializes the buttons
         self.choice_compare_type = wx.Choice(self, wx.ID_ANY, choices=["Choose Compare Type",
                                                                        "Price Update", "Discontinued Search"])
-        self.checkbox_comparator_list = wx.CheckBox(self, wx.ID_ANY, "Comparator List")
-        self.checkbox_importable_list = wx.CheckBox(self, wx.ID_ANY, "Importable List")
+        self.checkbox_individual_list = wx.CheckBox(self, wx.ID_ANY, "Individual List")
+        self.checkbox_importable_list = wx.CheckBox(self, wx.ID_ANY, "Master List")
         # self.checkbox_jake_dashboard = wx.CheckBox(self, wx.ID_ANY, "Jake's Master Dashboard")
         self.panel_1 = wx.Panel(self, wx.ID_ANY)
         self.button_continue = wx.Button(self, wx.ID_ANY, "Continue")
@@ -286,7 +323,7 @@ class FirstFrame(wx.Frame):
         self.SetBackgroundColour(wx.Colour(255, 255, 255))
         self.choice_compare_type.SetMinSize((150, 23))
         self.choice_compare_type.SetSelection(0)
-        self.checkbox_comparator_list.SetValue(1)
+        self.checkbox_individual_list.SetValue(1)
         self.checkbox_importable_list.SetValue(1)
         # self.checkbox_jake_dashboard.SetValue(0)
 
@@ -303,7 +340,7 @@ class FirstFrame(wx.Frame):
         sizer_14 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_16 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_10 = wx.BoxSizer(wx.VERTICAL)
-        global user
+        user = getuser()
         label_1 = wx.StaticText(self, wx.ID_ANY, f"Hello {user}! This program compares dealer spreadsheets to a d-tools"
                                                  f" csv file")
         sizer_10.Add(label_1, 0, wx.ALL, 5)
@@ -322,7 +359,7 @@ class FirstFrame(wx.Frame):
         sizer_13.Add(self.choice_compare_type, 0, wx.BOTTOM | wx.LEFT, 6)
         sizer_12.Add(sizer_13, 1, wx.EXPAND, 0)
         sizer_8.Add(sizer_12, 0, wx.EXPAND, 0)
-        sizer_15.Add(self.checkbox_comparator_list, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
+        sizer_15.Add(self.checkbox_individual_list, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
         sizer_15.Add(self.checkbox_importable_list, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
         # sizer_15.Add(self.checkbox_jake_dashboard, 0, wx.LEFT | wx.RIGHT | wx.TOP, 6)
         sizer_11.Add(sizer_15, 1, wx.EXPAND, 0)
@@ -338,17 +375,16 @@ class FirstFrame(wx.Frame):
         self.Layout()
 
     def on_choose_file(self, event):  # button_browse
-        global import_files
         dup_check = False
         file = self.button_browse.GetPath()  # catches what file the user chose
-        for iFile in import_files:  # checks if file is already in the to-be imported list
+        for iFile in self.import_files:  # checks if file is already in the to-be imported list
             if file == iFile:
                 dup_check = True
         if not file.endswith('.csv'):
             wx.MessageBox("Incorrect file type. Please choose .csv file.", "Error", wx.OK | wx.ICON_INFORMATION)
             event.skip()
         if not dup_check:
-            import_files.append(file)
+            self.import_files.append(file)
             self.text_ctrl_drag_drop.WriteText(basename(file) + '\n')  # shows the user they chose this
         else:
             print("Removed duplicate import file!")
@@ -356,22 +392,22 @@ class FirstFrame(wx.Frame):
         event.Skip()
 
     def on_continue_from_main_window(self, event):  # event handler
-        global import_files
+        print(self.import_files)
         dtools_date = date.today().strftime("Products %b %d, %Y")
         dtools_present = False
-        if len(import_files) < 2:
+        if len(self.import_files) < 2:
             wx.MessageBox("You need at least 2 files to continue.", "Error", wx.OK | wx.ICON_INFORMATION)
             return False
         if self.choice_compare_type.GetSelection() == 0:
             wx.MessageBox("You need to choose the comparison type.", "Error", wx.OK | wx.ICON_INFORMATION)
             return False
 
-        for index, file in enumerate(import_files):
+        for index, file in enumerate(self.import_files):
             print(basename(dtools_date), file)
             if basename(file).startswith(dtools_date):
-                temp_file = import_files[0]
-                import_files[0] = file
-                import_files[index] = temp_file
+                temp_file = self.import_files[0]
+                self.import_files[0] = file
+                self.import_files[index] = temp_file
                 dtools_present = True
                 break
         if not dtools_present:
@@ -381,18 +417,28 @@ class FirstFrame(wx.Frame):
 
         # daemon_window = threading.Thread(target=new_window_loop, args=(), daemon=True)
         # daemon_window.start()
-
-        self.compare_process.append(multiprocessing.Process(target=new_window_loop,
-                                                            args=(import_files,
-                                                                  self.choice_compare_type.GetSelection(),
-                                                                  self.checkbox_comparator_list.GetValue(),
-                                                                  self.checkbox_importable_list.GetValue()),
-                                                            daemon=True))
-        self.compare_process[len(self.compare_process) - 1].start()
+        # if len(self.import_files == 2):
+        #     self.compare_process.append(multiprocessing.Process(target=new_window_loop,
+        #                                                         args=(self.import_files,
+        #                                                               self.choice_compare_type.GetSelection(),
+        #                                                               self.checkbox_comparator_list.GetValue(),
+        #                                                               self.checkbox_importable_list.GetValue()),
+        #                                                         daemon=True))
+        #     self.compare_process[len(self.compare_process) - 1].start()
+        else:
+            for file in self.import_files[1:]:
+                temp_import_files = (self.import_files[0], file)
+                self.compare_process.append(multiprocessing.Process(target=new_window_loop,
+                                                                    args=(temp_import_files,
+                                                                          self.choice_compare_type.GetSelection(),
+                                                                          self.checkbox_individual_list.GetValue(),
+                                                                          self.checkbox_importable_list.GetValue()),
+                                                                    daemon=True))
+                self.compare_process[len(self.compare_process) - 1].start()
         # sheet_compare(self.choice_compare_type.GetSelection(), self.checkbox_comparator_list.GetValue(),
         #               self.checkbox_importable_list.GetValue())
         self.text_ctrl_drag_drop.SetValue("")  # resets the program
-        import_files.clear()  # resets the program
+        self.import_files.clear()  # resets the program
         event.Skip()
 
     def on_cancel_program(self, event):  # event handler
@@ -402,8 +448,8 @@ class FirstFrame(wx.Frame):
 
     def on_clear(self, event):  # resets the program
         self.text_ctrl_drag_drop.SetValue("")
-        global import_files, pb
-        import_files.clear()
+        global pb
+        self.import_files.clear()
         pb = not pb
         event.Skip()
 
