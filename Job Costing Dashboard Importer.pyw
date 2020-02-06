@@ -12,6 +12,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Alignment, PatternFill
 from openpyxl.formatting.rule import ColorScaleRule
 
+import pandas as pd
 # import xlsxwriter
 
 
@@ -93,21 +94,21 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
 
         # creates a list containing the cell locations for the datasheet we are importing
         source_cells = []
-        for cell in map_sheet['G4':'G54']:
+        for cell in map_sheet['G4':'G71']:
             source_cells.append(cell[0].value)
         # creates a list containing the cell locations for the current master dashboard
         dashboard_columns = []
-        for cell in map_sheet['F4':'F54']:
+        for cell in map_sheet['F4':'F71']:
             dashboard_columns.append(cell[0].value)
         # creates a list that tells us what type of data we are importing
         phase_cells = []
-        for cell in map_sheet['H4':'H54']:
+        for cell in map_sheet['H4':'H71']:
             phase_cells.append(cell[0].value)
         number_formats = []
-        for cell in map_sheet['I4':'I54']:
+        for cell in map_sheet['I4':'I71']:
             number_formats.append(cell[0].value)
         functions = []
-        for cell in map_sheet['J4':'J54']:
+        for cell in map_sheet['J4':'J71']:
             functions.append(cell[0].value)
             print(cell[0].value)
 
@@ -136,7 +137,7 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
             if index > 3:
                 if not temp_dir.value:
                     break
-                print(basename(temp_dir.value))
+                print(temp_dir.value)
                 temp_dirs.append(temp_dir.value.replace('{user}', getuser()))
                 if "Julian.Kizanis" in temp_dir.value:
                     temp_dir.value = temp_dir.value.replace('Julian.Kizanis', '{user}')
@@ -144,14 +145,14 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                     print('replacing...   ', temp_dir.value.replace('cyndi.schoep', '{user}'))
                     temp_dir.value = temp_dir.value.replace('cyndi.schoep', '{user}')
         import_directories = temp_dirs
-        # for directory in import_directories:
-        #     print(11111111111111111111, basename(directory))
+        # print(import_directories)
 
     # addition row
     for dashboard_column, function in zip(dashboard_columns, functions):
         # print(function)
         if function:
-            dashboard.active[f'{dashboard_column}3'].value = function.strip('!')
+            if '!!' not in function:
+                dashboard.active[f'{dashboard_column}3'].value = function.strip('!')
 
     # import_sheet is the datasheet with the information we are trying to import
     for import_directory in import_directories:
@@ -209,6 +210,8 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
             print(person, phase, change_row)
             rough_complete = False
             finish_complete = False
+            rough_na = False
+            finish_na = False
             # print('rough: ', source_cells, dashboard_columns, phase_cells, number_formats)
             for source_cell, dashboard_column, phase_cell, number_format in \
                     zip(source_cells, dashboard_columns, phase_cells, number_formats):
@@ -229,6 +232,8 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                         if box != 2:
                             print(box)
                             rough_complete = False
+                    if 'N/A' in str(import_sheet[source_cell].value):
+                        rough_na = True
 
                 if 'rough' in phase_cell:
                     # print('rough: ', source_cell, dashboard_column, phase_cell, number_format)
@@ -248,6 +253,13 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                             sum_cell += temp_value
                     dashboard_cell = dashboard.active[f'{dashboard_column}{change_row}']
                     dashboard_cell.value = sum_cell
+                    # if type(sum_cell) is str:
+                    #     sum_cell = 0
+                    #
+                    # if not(rough_na or sum_cell == 0):
+                    #     dashboard_cell.value = sum_cell
+                    # else:
+                    #     dashboard_cell.value = '#N/A'
 
                     dashboard_cell.alignment = Alignment(horizontal='center')
                     if number_format:
@@ -265,6 +277,8 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                         if box != 2:
                             print(box)
                             finish_complete = False
+                    if 'N/A' in str(import_sheet[source_cell].value):
+                        finish_na = True
 
                 if 'finish' in phase_cell and phase == FINISH_PHASE and finish_complete:
                     # print('finish: ', source_cell, dashboard_column, phase_cell, number_format)
@@ -284,6 +298,13 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                             sum_cell += temp_value
                     dashboard_cell = dashboard.active[f'{dashboard_column}{change_row}']
                     dashboard_cell.value = sum_cell
+                    # if type(sum_cell) is str:
+                    #     sum_cell = 0
+                    #
+                    # if not (rough_na or sum_cell == 0):
+                    #     dashboard_cell.value = sum_cell
+                    # else:
+                    #     dashboard_cell.value = '#N/A'
 
                     dashboard_cell.alignment = Alignment(horizontal='center')
                     if number_format:
@@ -399,6 +420,7 @@ class FirstFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
 
         self.import_files = []
+        # self.pd_sum = self.pd_sum_init()
 
         self.SetSize((640, 428))
         self.button_browse = wx.FilePickerCtrl(self)
@@ -539,21 +561,28 @@ class FirstFrame(wx.Frame):
         else:
             # for tracking if something went wrong
             default_check = kacey_check = True
-            try:
-                # default_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'default',
-                #                                  self.checkbox_auto_replace.GetValue(),
-                #                                  self.checkbox_phase_check.GetValue())
+            if self.checkbox_testing.GetValue() is False:
+                try:
+                    # default_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'default',
+                    #                                  self.checkbox_auto_replace.GetValue(),
+                    #                                  self.checkbox_phase_check.GetValue())
 
+                    kacey_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'kacey',
+                                                   self.checkbox_auto_replace.GetValue(),
+                                                   self.checkbox_phase_check.GetValue(),
+                                                   self.checkbox_testing.GetValue())
+                except Exception as e:
+                    wx.MessageBox(str(e), "Error!", wx.OK | wx.ICON_INFORMATION)
+            else:
                 kacey_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'kacey',
                                                self.checkbox_auto_replace.GetValue(),
                                                self.checkbox_phase_check.GetValue(),
                                                self.checkbox_testing.GetValue())
-            except Exception as e:
-                wx.MessageBox(str(e), "Error!", wx.OK | wx.ICON_INFORMATION)
 
             if default_check is True and kacey_check is True:  # if everything was successfully imported
                 wx.MessageBox(f"{self.text_ctrl_drag_drop.GetValue()}\n Was successfully imported!", "Done!",
                               wx.OK | wx.ICON_INFORMATION)
+                self.on_refresh(event)
             else:
                 wx.MessageBox("Something went wrong or did not import", "Done!", wx.OK | wx.ICON_INFORMATION)
             self.text_ctrl_drag_drop.SetValue("")  # resets the program
@@ -576,18 +605,24 @@ class FirstFrame(wx.Frame):
     def on_refresh(self, event):  # Refreshes the data
         # wx.MessageBox("Feature not finished yet", "Refreshing!", wx.ICON_INFORMATION)
         # return False
-        # TODO
         # refresh_box = wx.MessageBox("Refreshing the master dashboards...", "Refreshing!", wx.ICON_INFORMATION)
         default_check = kacey_check = False
-        try:
-            # default_check = refresh_dashboard(refresh_box, 'default', self.checkbox_phase_check.GetValue())
+        if self.checkbox_testing.GetValue() is False:
+            try:
+                # default_check = refresh_dashboard(refresh_box, 'default', self.checkbox_phase_check.GetValue())
+                kacey_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'kacey refresh',
+                                               self.checkbox_auto_replace.GetValue(),
+                                               self.checkbox_phase_check.GetValue(),
+                                               self.checkbox_testing.GetValue())
+                default_check = True
+            except Exception as e:
+                wx.MessageBox(str(e), "Error!", wx.OK | wx.ICON_INFORMATION)
+        else:
             kacey_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'kacey refresh',
                                            self.checkbox_auto_replace.GetValue(),
                                            self.checkbox_phase_check.GetValue(),
                                            self.checkbox_testing.GetValue())
             default_check = True
-        except Exception as e:
-            wx.MessageBox(str(e), "Error!", wx.OK | wx.ICON_INFORMATION)
 
         if default_check is True and kacey_check is True:
             wx.MessageBox("Done!", "Refreshing!", wx.ICON_INFORMATION)
@@ -603,6 +638,42 @@ class FirstFrame(wx.Frame):
             wx.MessageBox("Or is it Peanut butter?", "Peanutbutter!", wx.OK | wx.ICON_INFORMATION)
         pb = False
         event.Skip()
+
+    def pd_sum_init(self):
+        if self.checkbox_testing.GetValue() is True:
+            mappings_directory = "Dashboard Mappings.xlsx"
+            dashboard_directory = 'test dash.xlsx'
+        else:
+            mappings_directory = f"C:/Users/{getuser()}/SAV Digital Environments/SAV - Documents/Departments/" \
+                                 f"Accounting/Job Costing/00 Master Job Costing Sheet/" \
+                                 f"Job Costing Dashboard Import Program/Dashboard Mappings.xlsx"
+            dashboard_directory = f"C:/Users/{getuser()}/SAV Digital Environments/SAV - Documents/Departments/" \
+                                  f"Accounting/Job Costing/00 Master Job Costing Sheet/" \
+                                  f"Job Costing_Master_Dashboard.xlsx"
+
+        map_book = open_spreadsheet(mappings_directory)  # contains the cell to cell mapping info
+        map_sheet = map_book.active  # finds the active spreadsheet
+        functions = []
+        for cell in map_sheet['J4':'J54']:
+            functions.append(cell[0].value)
+            print(cell[0].value)
+
+        columns = []
+        for function in functions:
+            if function and '!!' in function:
+                temp_function = function.strip('!=()').replace('/', '+').split('+')
+                for temp_cell in temp_function:
+                    columns.append(str(temp_cell))
+        pd_sum = pd.DataFrame(columns=columns)
+
+        dashboard = open_spreadsheet(dashboard_directory)
+        if not dashboard:
+            return None
+
+        for index, temp_dir in enumerate(dashboard.active['A']):
+            if index > 3:
+                if not temp_dir.value:
+                    break
 
 
 class DatasheetOpenDialog(wx.Dialog):
