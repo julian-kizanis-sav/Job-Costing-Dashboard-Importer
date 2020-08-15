@@ -9,7 +9,7 @@ from ntpath import basename
 
 import wx
 from openpyxl import load_workbook
-from openpyxl.styles import Alignment, PatternFill
+from openpyxl.styles import Alignment, PatternFill, Border, Side
 from openpyxl.formatting.rule import ColorScaleRule
 
 # import xlsxwriter
@@ -55,36 +55,60 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
     """This function can import data using an external .xlsx map"""
     user = getuser()  # the current user
     if dev_mode == 1:
-        mappings_directory = "Dashboard Mappings.xlsx"
+        if phase == ROUGH_PHASE:
+            mappings_directory = "Dashboard Mappings Rough Testing.xlsx"
+        else:
+            mappings_directory = "Dashboard Mappings Testing.xlsx"
     else:
-        mappings_directory = f"C:/Users/{user}/SAV Digital Environments/SAV - Documents/Departments/Accounting/" \
-                             f"Job Costing/00 Master Job Costing Sheet/Job Costing Dashboard Import Program/" \
-                             f"Dashboard Mappings.xlsx"
+        if phase == ROUGH_PHASE:
+            mappings_directory = f"C:/Users/{user}/SAV Digital Environments/SAV - Documents/Departments/Accounting/" \
+                                 f"Job Costing/00 Master Job Costing Sheet/Job Costing Dashboard Import Program/" \
+                                 f"Dashboard Mappings Rough.xlsx"
+        else:
+            mappings_directory = f"C:/Users/{user}/SAV Digital Environments/SAV - Documents/Departments/Accounting/" \
+                                 f"Job Costing/00 Master Job Costing Sheet/Job Costing Dashboard Import Program/" \
+                                 f"Dashboard Mappings.xlsx"
 
     map_book = open_spreadsheet(mappings_directory)  # contains the cell to cell mapping info
     if not map_book:  # checks if map_book is empty
         return None
     map_sheet = map_book.active  # finds the active spreadsheet
-    if person == 'default':
-        dashboard_directory = f"C:/Users/{user}/SAV Digital Environments/SAV - Documents/Departments/Accounting/" \
-                              f"Job Costing/00 Master Job Costing Sheet/Job Costing_Master_Dashboard.xlsx"
+    if phase == ROUGH_PHASE:
+        if dev_mode == 1:
+            dashboard_directory = 'test dash rough.xlsx'
+        else:
+            dashboard_directory = f"C:/Users/{user}/SAV Digital Environments/SAV - Documents/Departments/Accounting/" \
+                                  f"Job Costing/00 Master Job Costing Sheet/Job Costing_Master_Data_Sheet_Rough.xlsx"
+
         # creates a list containing the cell locations for the datasheet we are importing
         source_cells = []
-        functions = []
-        number_formats = []
-        for cell in map_sheet['A3':'A22']:
+        for cell in map_sheet['G4':'G38']:
             source_cells.append(cell[0].value)
-            number_formats.append(None)
-        # creates a list containing the cell locations for the current master datasheet
+        # creates a list containing the cell locations for the current master dashboard
         dashboard_columns = []
-        for cell in map_sheet['B3':'B22']:
+        for cell in map_sheet['F4':'F38']:
             dashboard_columns.append(cell[0].value)
         # creates a list that tells us what type of data we are importing
         phase_cells = []
-        for cell in map_sheet['C3':'C22']:
+        for cell in map_sheet['H4':'H38']:
             phase_cells.append(cell[0].value)
+        number_formats = []
+        for cell in map_sheet['I4':'I38']:
+            number_formats.append(cell[0].value)
+        functions = []
+        for cell in map_sheet['J4':'J38']:
+            functions.append(cell[0].value)
+            print(cell[0].value)
+        functions_filtered = []
+        for cell in map_sheet['K4':'K38']:
+            functions_filtered.append(cell[0].value)
+            print(cell[0].value)
+        left_borders = []
+        for cell in map_sheet['L4':'L38']:
+            left_borders.append(cell[0].value)
+            print(cell[0].value)
 
-    elif 'kacey' in person:
+    elif phase == FINISH_PHASE:
         if dev_mode == 1:
             dashboard_directory = 'test dash.xlsx'
         else:
@@ -93,22 +117,30 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
 
         # creates a list containing the cell locations for the datasheet we are importing
         source_cells = []
-        for cell in map_sheet['G4':'G54']:
+        for cell in map_sheet['G4':'G78']:
             source_cells.append(cell[0].value)
         # creates a list containing the cell locations for the current master dashboard
         dashboard_columns = []
-        for cell in map_sheet['F4':'F54']:
+        for cell in map_sheet['F4':'F78']:
             dashboard_columns.append(cell[0].value)
         # creates a list that tells us what type of data we are importing
         phase_cells = []
-        for cell in map_sheet['H4':'H54']:
+        for cell in map_sheet['H4':'H78']:
             phase_cells.append(cell[0].value)
         number_formats = []
-        for cell in map_sheet['I4':'I54']:
+        for cell in map_sheet['I4':'I78']:
             number_formats.append(cell[0].value)
         functions = []
-        for cell in map_sheet['J4':'J54']:
+        for cell in map_sheet['J4':'J78']:
             functions.append(cell[0].value)
+            print(cell[0].value)
+        functions_filtered = []
+        for cell in map_sheet['K4':'K78']:
+            functions_filtered.append(cell[0].value)
+            print(cell[0].value)
+        left_borders = []
+        for cell in map_sheet['L4':'L78']:
+            left_borders.append(cell[0].value)
             print(cell[0].value)
 
     # elif person == 'jake':
@@ -132,8 +164,12 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
 
     if 'refresh' in person:
         temp_dirs = []
-        for index, temp_dir in enumerate(dashboard.active['AY']):
-            if index > 3:
+        if phase == ROUGH_PHASE:
+            dir_column = 'AH'
+        else:
+            dir_column = 'BF'
+        for index, temp_dir in enumerate(dashboard.active[dir_column]):
+            if index > 4:
                 if not temp_dir.value:
                     break
                 print(basename(temp_dir.value))
@@ -148,12 +184,15 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
         #     print(11111111111111111111, basename(directory))
 
     # addition row
-    for dashboard_column, function in zip(dashboard_columns, functions):
+    for dashboard_column, function, function_filtered in zip(dashboard_columns, functions, functions_filtered):
         # print(function)
         if function:
             dashboard.active[f'{dashboard_column}3'].value = function.strip('!')
+        if function_filtered:
+            dashboard.active[f'{dashboard_column}4'].value = function_filtered.strip('!')
 
-    # import_sheet is the datasheet with the information we are trying to import
+    dashboard.save(dashboard_directory.format(user_name=user))
+
     for import_directory in import_directories:
         try:
             import_book = open_spreadsheet(import_directory)
@@ -174,12 +213,14 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
         last_row = 0
         for cell in dashboard.active['A']:  # searches through the project names in the master dashboard
             # print(person, cell.value, cell.row)
-            finish_date_column = ""
+            date_column = ""
             for dashboard_column, phase_cell in zip(dashboard_columns, phase_cells):
+                if phase_cell == 'rough_check':
+                    date_column = dashboard_column
                 if phase_cell == 'finish_check':
-                    finish_date_column = dashboard_column
+                    date_column = dashboard_column
             if cell.value == import_sheet['D2'].value:
-                if (phase == ROUGH_PHASE or dashboard.active[f'{finish_date_column}{cell.row}'].value) \
+                if (phase == ROUGH_PHASE or dashboard.active[f'{date_column}{cell.row}'].value) \
                         and auto_replace is False:
                     open_data_sheet = f"Name:{import_sheet['D2'].value}\nLocation:{import_sheet['D3'].value}\n" \
                                       f"PM:{import_sheet['D4'].value}\nDirectory:{import_directory}"
@@ -194,7 +235,7 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                         print('manual replace')
                     elif change_row == CANCEL:
                         return False
-                elif (not dashboard.active[f'{finish_date_column}{cell.row}'].value) or auto_replace is True:
+                elif (not dashboard.active[f'{date_column}{cell.row}'].value) or auto_replace is True:
                     change_row = cell.row
                     print('auto replace')
             if cell.value:
@@ -209,13 +250,15 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
             print(person, phase, change_row)
             rough_complete = False
             finish_complete = False
+            rough_ignore = finish_ignore = False
             # print('rough: ', source_cells, dashboard_columns, phase_cells, number_formats)
-            for source_cell, dashboard_column, phase_cell, number_format in \
-                    zip(source_cells, dashboard_columns, phase_cells, number_formats):
+            for source_cell, dashboard_column, phase_cell, number_format, left_border in \
+                    zip(source_cells, dashboard_columns, phase_cells, number_formats, left_borders):
                 # print('cells', source_cell, dashboard_column, phase_cell)
                 # print('dashboard_cell:  ', dashboard_column, ',', change_row)
                 if phase_cell == 'Name':
                     dashboard.active[f'{dashboard_column}{change_row}'] = import_sheet[source_cell].value
+                    dashboard.active[f'{dashboard_column}{change_row}'].alignment = Alignment(horizontal='left')
 
                 if phase_cell == 'rough_check':
                     rough_complete = True
@@ -229,6 +272,9 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                         if box != 2:
                             print(box)
                             rough_complete = False
+
+                    if import_sheet[source_cell].value == 'N/A':
+                        rough_ignore = True
 
                 if 'rough' in phase_cell:
                     # print('rough: ', source_cell, dashboard_column, phase_cell, number_format)
@@ -255,6 +301,9 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                     else:
                         dashboard_cell.number_format = import_sheet[temp_cells[0]].number_format
 
+                    if rough_ignore is True and (dashboard_cell.value == '#DIV/0!' or dashboard_cell.value == 0):
+                        dashboard_cell.value = '#N/A'
+
                 if phase_cell == 'finish_check' and phase == FINISH_PHASE:
                     finish_complete = True
                     if not import_sheet[source_cell].value and phase_check is False:
@@ -265,6 +314,8 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                         if box != 2:
                             print(box)
                             finish_complete = False
+                    if import_sheet[source_cell].value == 'N/A':
+                        finish_ignore = True
 
                 if 'finish' in phase_cell and phase == FINISH_PHASE and finish_complete:
                     # print('finish: ', source_cell, dashboard_column, phase_cell, number_format)
@@ -281,6 +332,7 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                         if temp_index == 0:
                             sum_cell = temp_value
                         else:
+                            # print(f"{dashboard_column} sum_cell = {sum_cell} += {temp_value}")
                             sum_cell += temp_value
                     dashboard_cell = dashboard.active[f'{dashboard_column}{change_row}']
                     dashboard_cell.value = sum_cell
@@ -290,6 +342,15 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                         dashboard_cell.number_format = number_format
                     else:
                         dashboard_cell.number_format = import_sheet[temp_cells[0]].number_format
+
+                    if finish_ignore is True and (dashboard_cell.value == '#DIV/0!' or dashboard_cell.value == 0):
+                        dashboard_cell.value = '#N/A'
+
+                if phase_cell == 'formula':
+                    dashboard_cell = dashboard.active[f'{dashboard_column}{change_row}']
+                    dashboard_cell.value = source_cell.strip('!').replace("{change_row}", str(change_row))
+                    dashboard_cell.alignment = Alignment(horizontal='center')
+                    dashboard_cell.number_format = number_format
 
                 if phase_cell == 'logging':
                     dashboard_cell = dashboard.active[f'{dashboard_column}{change_row}']
@@ -340,6 +401,20 @@ def append_dashboard(import_directories, phase, person, auto_replace, phase_chec
                             wx.MessageBox(str(e), "ValueError", wx.OK | wx.ICON_INFORMATION)
                         except TypeError:
                             print('empty')
+
+                if left_border == 'thick':
+                    dashboard_cell = dashboard.active[f'{dashboard_column}{change_row}']
+                    dashboard_cell.border = Border(left=Side(style='medium'),
+                                                   right=Side(style='thin'),
+                                                   top=Side(style='thin'),
+                                                   bottom=Side(style='thin'))
+
+                if left_border == 'thin':
+                    dashboard_cell = dashboard.active[f'{dashboard_column}{change_row}']
+                    dashboard_cell.border = Border(left=Side(style='thin'),
+                                                   right=Side(style='thin'),
+                                                   top=Side(style='thin'),
+                                                   bottom=Side(style='thin'))
 
     print('saving to: ', dashboard_directory.format(user_name=user))
     dashboard.save(dashboard_directory.format(user_name=user))
@@ -539,17 +614,23 @@ class FirstFrame(wx.Frame):
         else:
             # for tracking if something went wrong
             default_check = kacey_check = True
-            try:
-                # default_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'default',
-                #                                  self.checkbox_auto_replace.GetValue(),
-                #                                  self.checkbox_phase_check.GetValue())
+            if self.checkbox_testing.GetValue() is False:
+                try:
+                    # default_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'default',
+                    #                                  self.checkbox_auto_replace.GetValue(),
+                    #                                  self.checkbox_phase_check.GetValue())
 
+                    kacey_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'kacey',
+                                                   self.checkbox_auto_replace.GetValue(),
+                                                   self.checkbox_phase_check.GetValue(),
+                                                   self.checkbox_testing.GetValue())
+                except Exception as e:
+                    wx.MessageBox(str(e), "Error!", wx.OK | wx.ICON_INFORMATION)
+            else:
                 kacey_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'kacey',
                                                self.checkbox_auto_replace.GetValue(),
                                                self.checkbox_phase_check.GetValue(),
                                                self.checkbox_testing.GetValue())
-            except Exception as e:
-                wx.MessageBox(str(e), "Error!", wx.OK | wx.ICON_INFORMATION)
 
             if default_check is True and kacey_check is True:  # if everything was successfully imported
                 wx.MessageBox(f"{self.text_ctrl_drag_drop.GetValue()}\n Was successfully imported!", "Done!",
@@ -579,15 +660,22 @@ class FirstFrame(wx.Frame):
         # TODO
         # refresh_box = wx.MessageBox("Refreshing the master dashboards...", "Refreshing!", wx.ICON_INFORMATION)
         default_check = kacey_check = False
-        try:
+        if self.checkbox_testing.GetValue() is False:
+            # try:
             # default_check = refresh_dashboard(refresh_box, 'default', self.checkbox_phase_check.GetValue())
             kacey_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'kacey refresh',
                                            self.checkbox_auto_replace.GetValue(),
                                            self.checkbox_phase_check.GetValue(),
                                            self.checkbox_testing.GetValue())
             default_check = True
-        except Exception as e:
-            wx.MessageBox(str(e), "Error!", wx.OK | wx.ICON_INFORMATION)
+            # except Exception as e:
+            #     wx.MessageBox(str(e), "Error!", wx.OK | wx.ICON_INFORMATION)
+        else:
+            kacey_check = append_dashboard(self.import_files, self.choice_phase.GetSelection(), 'kacey refresh',
+                                           self.checkbox_auto_replace.GetValue(),
+                                           self.checkbox_phase_check.GetValue(),
+                                           self.checkbox_testing.GetValue())
+            default_check = True
 
         if default_check is True and kacey_check is True:
             wx.MessageBox("Done!", "Refreshing!", wx.ICON_INFORMATION)
